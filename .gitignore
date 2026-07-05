@@ -1,0 +1,5 @@
+train/
+*.out
+*.exe
+build/
+.vscode/

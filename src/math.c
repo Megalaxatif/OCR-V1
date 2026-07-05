@@ -27,6 +27,17 @@ struct Mat* MatCreate(size_t row, size_t col, double* data[]){
     return newMat;
 }
 
+void MatDestroy(struct Mat* mat){
+    if (mat == NULL) return;
+    if (mat->data != NULL && *(mat->data) != NULL){
+        for(size_t i = 0; i < mat->row; i++){
+            free(mat->data[i]);
+        }
+        free(mat->data);
+    }
+    free(mat);
+}
+
 struct Mat* MatTranspose(struct Mat* mat){
     struct Mat* transpose = MatCreate(mat->col, mat->row, NULL);
     for(size_t i = 0; i < mat->row; i++){
@@ -37,19 +48,15 @@ struct Mat* MatTranspose(struct Mat* mat){
     return transpose;
 }
 
-void MatDestroy(struct Mat* mat){
-    for(size_t i = 0; i < mat->row; i++){
-        free(mat->data[i]);
-    }
-    free(mat->data);
-    free(mat);
-}
-
 
 void MatPrint(struct Mat* mat){
+    if (mat == NULL){
+        printf("Error: MatPrint, matrix pointer is NULL\n");
+        return;
+    }
     for(size_t i = 0; i < mat->row; i++){
         for(size_t j = 0; j < mat->col; j++){
-            printf("%f ", mat->data[i][j]);
+            printf("%.1f ", mat->data[i][j]);
         }
         printf("\n");
     }
