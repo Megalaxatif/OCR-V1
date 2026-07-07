@@ -1,5 +1,16 @@
 #include "header/math.h"
 
+double Relu(double x){
+    if (x < 0) return 0;
+    return x;
+}
+
+double ReluPrime(double x){
+    if (x < 0) return 0;
+    return 1;
+}
+
+
 
 struct Mat* MatCreate(size_t row, size_t col, double* data[]){
     if (row <= 0 || col <= 0) {
@@ -97,8 +108,8 @@ struct Mat* MatMult(struct Mat* mat_1, struct Mat* mat_2){ // perform the matrix
         return NULL;
     }
     struct Mat* res = MatCreate(mat_1->row, mat_2->col, NULL);
-    for(int j = 0; j < mat_2->col; j++){
-        for(int i = 0; i < mat_1->row; i++){
+    for(size_t j = 0; j < mat_2->col; j++){
+        for(size_t i = 0; i < mat_1->row; i++){
             double tmp = 0;
             for(int k = 0; k < mat_2->row; k++){
                 tmp += mat_1->data[i][k] * mat_2->data[k][j];
@@ -107,4 +118,13 @@ struct Mat* MatMult(struct Mat* mat_1, struct Mat* mat_2){ // perform the matrix
         }
     }
     return res;
+}
+
+struct Mat* MatFunc(struct Mat* mat_1, double (*f)(double)){ // apply the function f on every element of mat_1 and return it
+    for(size_t i = 0; i < mat_1->row; i++){
+        for(size_t j = 0; j < mat_1->col; j++){
+            mat_1->data[i][j] = f(mat_1->data[i][j]);
+        }
+    }
+    return mat_1;
 }

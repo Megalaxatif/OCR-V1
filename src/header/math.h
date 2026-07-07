@@ -17,3 +17,6 @@ void MatPrint(struct Mat* mat);
 struct Mat* MatAdd(struct Mat* mat_1, struct Mat* mat_2);
 struct Mat* MatHadamard(struct Mat* mat_1, struct Mat* mat_2);
 struct Mat* MatMult(struct Mat* mat_1, struct Mat* mat_2);
+struct Mat* MatFunc(struct Mat* mat_1, double (*f)(double));
+double Relu(double x);
+double ReluPrime(double x);
