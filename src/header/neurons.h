@@ -9,4 +9,5 @@ struct Layer{
 
 struct Layer* CreateLayer(size_t currentLayerNeuronCount, size_t nextLayerNeuronCount, struct Mat* weights, struct Mat* biases);
 void DestroyLayer(struct Layer* layer);
-int ForwardPass(struct Layer* layer, struct Mat* previousActivation);
+int ForwardPass(struct Layer* layer, struct Layer* nextLayer);
+int Train(struct Layer* network, char* imgFileName);

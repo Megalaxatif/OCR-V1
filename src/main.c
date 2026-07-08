@@ -1,29 +1,18 @@
 #include "header/math.h"
 #include "header/init.h"
 #include "header/image.h"
-
+#include "header/neurons.h"
 
 int main(){
-    double r1[] = {-1, 2, 3};
-    double r2[] = {-0, -2, 1};
-    double r3[] = {-3, 1, 2};
-
-    double* v1[] =
-        {
-            r1,
-            r2,
-            r3
-        };
-
-    struct Mat* mat_1 = MatCreate(3, 3,  v1);
-    printf("mat1:\n");
-    MatPrint(mat_1);
-    printf("\n");
-    mat_1 = MatFunc(mat_1, Relu);
-    MatPrint(mat_1);
-
     InitSDL();
-    struct Mat* grayScale = GetGrayScaleMatrix("/home/megalaxatif/Documents/code/OCR/cool dude.png");
+    struct Mat* grayScale = GetGrayScaleMatrix("/home/megalaxatif/Documents/code/OCR/train/0/1.png");
+
+    struct Layer* network[4] = {NULL};
+
+    network[0] = CreateLayer(NETWORK_IMG_SIZE*NETWORK_IMG_SIZE, 16, NULL, NULL); // input
+    network[1] = CreateLayer(16, 16, NULL, NULL);  // h1
+    network[2] = CreateLayer(16, 10, NULL, NULL);  // h2
+    network[3] = (struct Layer*){NULL, NULL, NULL}; // final layer (no weights nor biases)
 
     SDL_Event event;
     int running = 1;
@@ -42,8 +31,10 @@ int main(){
         SDL_Delay(100); // delay to limit the frame rate
     }
     // cleaning
+    for(int i = 0; i < 4; i++){
+        DestroyLayer(network[i]);
+    }
     DestroySDL();
     MatDestroy(grayScale);
-    MatDestroy(mat_1);
     return 0;
 }

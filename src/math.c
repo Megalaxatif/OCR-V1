@@ -11,7 +11,6 @@ double ReluPrime(double x){
 }
 
 
-
 struct Mat* MatCreate(size_t row, size_t col, double* data[]){
     if (row <= 0 || col <= 0) {
         printf("Error: MatCreate, invalid row or col value\n");
