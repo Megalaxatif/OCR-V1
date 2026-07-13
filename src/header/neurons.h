@@ -2,9 +2,10 @@
 #include "math.h"
 
 struct Layer{
-    struct Mat* weights;
-    struct Mat* biases;
-    struct Mat* activation;
+    struct Mat* weights;       // W
+    struct Mat* biases;        // B
+    struct Mat* preActivation; // Z
+    struct Mat* activation;    // A
 };
 
 struct Layer* CreateLayer(size_t currentLayerNeuronCount, size_t nextLayerNeuronCount, struct Mat* weights, struct Mat* biases);

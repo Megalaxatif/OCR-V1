@@ -12,9 +12,11 @@ struct Layer* CreateLayer(size_t currentLayerNeuronCount, size_t nextLayerNeuron
         weights = MatCreate(nextLayerNeuronCount, currentLayerNeuronCount, NULL);
     if (biases == NULL)
         biases = MatCreate(nextLayerNeuronCount, 1, NULL);
+    struct Mat* preactivation = MatCreate(currentLayerNeuronCount, 1, NULL);
     struct Mat* activation = MatCreate(currentLayerNeuronCount, 1, NULL);
     struct Layer* newLayer = malloc(sizeof(struct Layer));
 
+    newLayer->preActivation = preactivation;
     newLayer->activation = activation;
     newLayer->biases = biases;
     newLayer->weights = weights;
@@ -34,23 +36,25 @@ void DestroyLayer(struct Layer* layer){
 }
 
 int ForwardPass(struct Layer* layer, struct Layer* nextLayer){ // calculate the activation of the current layer using the activation of the previous one
-    struct Mat* newActivation = MatMult(layer->weights, layer->activation);
-    if (newActivation == NULL){
-        printf("Error: ForwardPass, newActivation is NULL\n");
+    struct Mat* preActivation = MatMult(layer->weights, layer->activation);
+    if (preActivation == NULL){
+        printf("Error: ForwardPass, preActivation is NULL\n");
         return 1;
     }
-    newActivation = MatAdd(newActivation, layer->biases);
-    if (newActivation == NULL){
-        printf("Error: ForwardPass, newActivation is NULL\n");
+    preActivation = MatAdd(preActivation, layer->biases);
+    if (preActivation == NULL){
+        printf("Error: ForwardPass, preActivation is NULL\n");
         return 2;
     }
-    newActivation = MatFunc(newActivation, Relu);
-    if (newActivation == NULL){
-        printf("Error: ForwardPass, newActivation is NULL\n");
+    struct Mat* activation = MatFunc(preActivation, Relu);
+    if (activation == NULL){
+        printf("Error: ForwardPass, activation is NULL\n");
         return 3;
     }
+    MatDestroy(nextLayer->preActivation);
     MatDestroy(nextLayer->activation);
-    nextLayer->activation = newActivation;
+    nextLayer->preActivation = preActivation;
+    nextLayer->activation = activation;
     return 0;
 }
 
