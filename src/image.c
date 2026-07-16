@@ -1,5 +1,4 @@
 #include "header/math.h"
-#include "header/neurons.h"
 #include "header/init.h"
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>

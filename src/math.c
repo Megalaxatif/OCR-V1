@@ -48,7 +48,7 @@ void MatDestroy(struct Mat* mat){
     free(mat);
 }
 
-struct Mat* MatTranspose(struct Mat* mat){ // create the transpose matrix of mat and return it
+struct Mat* MatTranspose(struct Mat* mat){
     struct Mat* transpose = MatCreate(mat->col, mat->row, NULL);
     for(size_t i = 0; i < mat->row; i++){
         for(size_t j = 0; j < mat->col; j++){
@@ -73,7 +73,7 @@ void MatPrint(struct Mat* mat){
 }
 
 
-struct Mat* MatAdd(struct Mat* mat_1, struct Mat* mat_2){ // create a new matrix that adds mat_2 to mat_1 and return it
+struct Mat* MatAdd(struct Mat* mat_1, struct Mat* mat_2){
     if (mat_1->col != mat_2->col || mat_1->row != mat_2->row){
         printf("Error: MatAdd, the matrices don't have the same size\n");
         return NULL;
@@ -87,22 +87,22 @@ struct Mat* MatAdd(struct Mat* mat_1, struct Mat* mat_2){ // create a new matrix
     return newMat;
 }
 
-struct Mat* MatSub(struct Mat* mat_1, struct Mat* mat_2){ // create a new matrix that adds mat_2 to mat_1 and return it
+struct Mat* MatSub(struct Mat* mat_1, struct Mat* mat_2){
     if (mat_1->col != mat_2->col || mat_1->row != mat_2->row){
-        printf("Error: MatAdd, the matrices don't have the same size\n");
+        printf("Error: MatSub, the matrices don't have the same size\n");
         return NULL;
     }
     struct Mat* newMat = MatCreate(mat_1->row, mat_1->col, NULL);
     for(size_t i = 0; i < newMat->row; i++){
         for(size_t j = 0; j < newMat->col; j++){
-            newMat->data[i][j] = mat_1->data[i][j] + mat_2->data[i][j];
+            newMat->data[i][j] = mat_1->data[i][j] - mat_2->data[i][j];
         }
     }
     return newMat;
 }
 
 
-struct Mat* MatHadamard(struct Mat* mat_1, struct Mat* mat_2){ // create a new matrix by performing the Hadamard product between mat_1 and mat_2 and return it
+struct Mat* MatHadamard(struct Mat* mat_1, struct Mat* mat_2){
     if (mat_1->col != mat_2->col || mat_1->row != mat_2->row){
         printf("Error: MatHadamard, the matrices don't have the same size\n");
         return NULL;
@@ -117,7 +117,7 @@ struct Mat* MatHadamard(struct Mat* mat_1, struct Mat* mat_2){ // create a new m
 }
 
 
-struct Mat* MatMult(struct Mat* mat_1, struct Mat* mat_2){ // perform the matrix multiplication between mat_1 and mat_2 and return the resulting matrix
+struct Mat* MatMult(struct Mat* mat_1, struct Mat* mat_2){
     if (mat_1->col != mat_2->row){
         printf("Error: MatMult, the matrices don't have compatible size\n");
         return NULL;
@@ -135,11 +135,33 @@ struct Mat* MatMult(struct Mat* mat_1, struct Mat* mat_2){ // perform the matrix
     return res;
 }
 
-struct Mat* MatFunc(struct Mat* mat_1, double (*f)(double)){ // create a new matrix by applying the function f on every element of mat_1 and return it
-    struct Mat* newMat = MatCreate(mat_1->row, mat_1->col, NULL);
+struct Mat* MatFunc(struct Mat* mat, double (*f)(double)){
+    if (mat == NULL){
+        printf("Error: MatFunc, the matrix is NULL\n");
+        return NULL;
+    }
+    if (f == NULL){
+        printf("Error: MatFunc, the function is NULL\n");
+        return NULL;
+    }
+    struct Mat* newMat = MatCreate(mat->row, mat->col, NULL);
     for(size_t i = 0; i < newMat->row; i++){
         for(size_t j = 0; j < newMat->col; j++){
-            newMat->data[i][j] = f(mat_1->data[i][j]);
+            newMat->data[i][j] = f(mat->data[i][j]);
+        }
+    }
+    return newMat;
+}
+
+struct Mat* MatScalar(struct Mat* mat, double scalar){
+    if (mat == NULL){
+        printf("Error: MatFunc, the matrix is NULL\n");
+        return NULL;
+    }
+    struct Mat* newMat = MatCreate(mat->row, mat->col, NULL);
+    for(size_t i = 0; i < newMat->row; i++){
+        for(size_t j = 0; j < newMat->col; j++){
+            newMat->data[i][j] = scalar * mat->data[i][j];
         }
     }
     return newMat;

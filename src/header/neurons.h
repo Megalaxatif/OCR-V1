@@ -8,7 +8,12 @@ struct Layer{
     struct Mat* activation;    // A
 };
 
+struct Network{
+    struct Layer* layers;
+    size_t layerCount;
+    double learningRate;
+};
 struct Layer* CreateLayer(size_t currentLayerNeuronCount, size_t nextLayerNeuronCount, struct Mat* weights, struct Mat* biases);
 void DestroyLayer(struct Layer* layer);
 int ForwardPass(struct Layer* layer, struct Layer* nextLayer);
-int Train(struct Layer* network, char* imgFileName);
+int Train(struct Network* network, char* imgFileName, struct Mat* answer);
