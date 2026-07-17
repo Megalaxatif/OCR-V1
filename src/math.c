@@ -87,11 +87,25 @@ struct Mat* MatAdd(struct Mat* mat_1, struct Mat* mat_2){
     return newMat;
 }
 
+struct Mat* MatAddInternal(struct Mat* mat_1, struct Mat* mat_2){
+    if (mat_1->col != mat_2->col || mat_1->row != mat_2->row){
+        printf("Error: MatAddInternal, the matrices don't have the same size\n");
+        return NULL;
+    }
+    for(size_t i = 0; i < mat_1->row; i++){
+        for(size_t j = 0; j < mat_1->col; j++){
+            mat_1->data[i][j] +=+ mat_2->data[i][j];
+        }
+    }
+    return mat_1;
+}
+
 struct Mat* MatSub(struct Mat* mat_1, struct Mat* mat_2){
     if (mat_1->col != mat_2->col || mat_1->row != mat_2->row){
         printf("Error: MatSub, the matrices don't have the same size\n");
         return NULL;
     }
+
     struct Mat* newMat = MatCreate(mat_1->row, mat_1->col, NULL);
     for(size_t i = 0; i < newMat->row; i++){
         for(size_t j = 0; j < newMat->col; j++){
@@ -99,6 +113,20 @@ struct Mat* MatSub(struct Mat* mat_1, struct Mat* mat_2){
         }
     }
     return newMat;
+}
+
+struct Mat* MatSubInternal(struct Mat* mat_1, struct Mat* mat_2){
+    if (mat_1->col != mat_2->col || mat_1->row != mat_2->row){
+        printf("Error: MatSubInternal, the matrices don't have the same size\n");
+        return NULL;
+    }
+
+    for(size_t i = 0; i < mat_1->row; i++){
+        for(size_t j = 0; j < mat_1->col; j++){
+            mat_1->data[i][j] -= mat_2->data[i][j];
+        }
+    }
+    return mat_1;
 }
 
 
@@ -114,6 +142,19 @@ struct Mat* MatHadamard(struct Mat* mat_1, struct Mat* mat_2){
         }
     }
     return newMat;
+}
+
+struct Mat* MatHadamardInternal(struct Mat* mat_1, struct Mat* mat_2){
+    if (mat_1->col != mat_2->col || mat_1->row != mat_2->row){
+        printf("Error: MatHadamardInternal, the matrices don't have the same size\n");
+        return NULL;
+    }
+    for(size_t i = 0; i < mat_1->row; i++){
+        for(size_t j = 0; j < mat_1->col; j++){
+            mat_1->data[i][j] *= mat_2->data[i][j];
+        }
+    }
+    return mat_1;
 }
 
 
@@ -153,9 +194,26 @@ struct Mat* MatFunc(struct Mat* mat, double (*f)(double)){
     return newMat;
 }
 
+struct Mat* MatFuncInternal(struct Mat* mat, double (*f)(double)){
+    if (mat == NULL){
+        printf("Error: MatFuncInternal, the matrix is NULL\n");
+        return NULL;
+    }
+    if (f == NULL){
+        printf("Error: MatFuncInternal, the function is NULL\n");
+        return NULL;
+    }
+    for(size_t i = 0; i < mat->row; i++){
+        for(size_t j = 0; j < mat->col; j++){
+            mat->data[i][j] = f(mat->data[i][j]);
+        }
+    }
+    return mat;
+}
+
 struct Mat* MatScalar(struct Mat* mat, double scalar){
     if (mat == NULL){
-        printf("Error: MatFunc, the matrix is NULL\n");
+        printf("Error: MatScalar, the matrix is NULL\n");
         return NULL;
     }
     struct Mat* newMat = MatCreate(mat->row, mat->col, NULL);
@@ -165,4 +223,17 @@ struct Mat* MatScalar(struct Mat* mat, double scalar){
         }
     }
     return newMat;
+}
+
+struct Mat* MatScalarInternal(struct Mat* mat, double scalar){
+    if (mat == NULL){
+        printf("Error: MatScalarInternal, the matrix is NULL\n");
+        return NULL;
+    }
+    for(size_t i = 0; i < mat->row; i++){
+        for(size_t j = 0; j < mat->col; j++){
+            mat->data[i][j] *= scalar;
+        }
+    }
+    return mat;
 }
