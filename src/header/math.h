@@ -27,3 +27,4 @@ struct Mat* MatScalar(struct Mat* mat, double scalar); // create a new matrix an
 struct Mat* MatScalarInternal(struct Mat* mat, double scalar); // multiply each element of mat by the scalar and return mat
 double Relu(double x);
 double ReluPrime(double x);
+size_t Random(size_t min, size_t max); // generate a random number between min and max and return it

@@ -1,4 +1,11 @@
 #include "header/math.h"
+#include <time.h>
+
+#include <stdlib.h>
+
+size_t Random(size_t min, size_t max){
+    return min + rand() % (max - min + 1);
+}
 
 double Relu(double x){
     if (x < 0) return 0;
@@ -19,19 +26,21 @@ struct Mat* MatCreate(size_t row, size_t col, double* data[]){
 
     struct Mat* newMat = malloc(sizeof(struct Mat));
 
-    newMat->data = calloc(sizeof(double*), row);
+    newMat->data = malloc(row*sizeof(double*));
     newMat->row = row;
     newMat->col = col;
 
     for(int i = 0; i < row; i++){
-        newMat->data[i] = calloc(sizeof(double), col);
+        newMat->data[i] = malloc(col*sizeof(double));
     }
 
-    if (data != NULL){
-        for(size_t i = 0; i < newMat->row; i++){
-            for(size_t j = 0; j < newMat->col; j++){
+    srand(time(NULL)); // initialise the seed
+    for(size_t i = 0; i < newMat->row; i++){
+        for(size_t j = 0; j < newMat->col; j++){
+            if (data != NULL)
                 newMat->data[i][j] = data[i][j];
-            }
+            else
+                newMat->data[i][j] = 2.0 * ((double)rand() / RAND_MAX) - 1.0; // generates a random number between -1 and 1
         }
     }
     return newMat;
@@ -66,7 +75,7 @@ void MatPrint(struct Mat* mat){
     }
     for(size_t i = 0; i < mat->row; i++){
         for(size_t j = 0; j < mat->col; j++){
-            printf("%.1f ", mat->data[i][j]);
+            printf("%.2f ", mat->data[i][j]);
         }
         printf("\n");
     }
