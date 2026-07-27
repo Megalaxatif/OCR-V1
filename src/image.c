@@ -7,11 +7,11 @@
 #include <SDL2/SDL_surface.h>
 
 
-struct Mat* GetGrayScaleMatrix(char* imgFileName){ // loads the given image and returns a matrix of its grayscale
+struct Mat* GetGrayScaleMatrix(char imgFileName[]){ // loads the given image and returns a matrix of its grayscale
     SDL_Surface* surface = IMG_Load(imgFileName);
 
     if (surface == NULL){
-        printf("Error: GetGrayScaleMatrix, impossible to load the image\n");
+        printf("Error: GetGrayScaleMatrix, impossible to load the image at %s\n", imgFileName);
         return NULL;
     }
 

@@ -4,6 +4,7 @@
 #include "header/image.h"
 #include "header/neurons.h"
 #include <string.h>
+#include <stdlib.h>
 
 int errorCode = 0;
 size_t* fileCount = NULL; // fileCount[i] correspond to the number of elements in files[i]
@@ -42,14 +43,19 @@ int main(){
                 running = 0;
         }
         // create the sample
-        char* sample[10];
+        char sample[10][100];
+        int len = strlen(TRAIN_DIRECTORY_PATH);
         for(int i = 0; i < 10; i++){
+            strcpy(sample[i], TRAIN_DIRECTORY_PATH);
+            sample[i][len] = i + '0';
+            sample[i][len + 1] = '/';
+            sample[i][len + 2] = '\0';
             size_t index = Random(0, fileCount[i]-1);
-            sample[i] = files[i][index];
+            strcat(sample[i], files[i][index]);
         }
 
         // train with the sample
-        Train(network, sample, SAMPLE_SIZE, answer10);
+        Train(network, sample, 10, answer10);
         // SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
         // SDL_SetRenderTarget(renderer, NULL);
         // SDL_RenderClear(renderer);
@@ -83,6 +89,9 @@ int main(){
 
     DestroyNetwork(network);
     DestroySDL();
+
+    printf("matCount : %ld\n", matCount);
+
     printf("return code: %d\n", errorCode);
     return errorCode;
 }

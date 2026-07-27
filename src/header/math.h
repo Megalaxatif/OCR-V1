@@ -11,11 +11,12 @@ struct Mat{
 };
 
 struct Mat* MatCreate(size_t row, size_t col, double* data[]);
+struct Mat* MatCopy(struct Mat* mat); // create a copy of mat and return it
 struct Mat* MatTranspose(struct Mat* mat); // create the transpose matrix of mat and return it
 void MatDestroy(struct Mat* mat);
 void MatPrint(struct Mat* mat);
 struct Mat* MatAdd(struct Mat* mat_1, struct Mat* mat_2);// create a new matrix that adds mat_1 to mat_2 and return it
-struct Mat* MatAddInternal(struct Mat* mat_1, struct Mat* mat_2); // add mat_2 to mat_1 and return mat_1
+int MatAddInternal(struct Mat* mat_1, struct Mat* mat_2); // add mat_2 to mat_1 and return mat_1
 struct Mat* MatSub(struct Mat* mat_1, struct Mat* mat_2);// create a new matrix that substracts mat_1 with mat_2 and return it
 struct Mat* MatSubInternal(struct Mat* mat_1, struct Mat* mat_2);// substract mat_2 to mat_1 and return mat_1
 struct Mat* MatHadamard(struct Mat* mat_1, struct Mat* mat_2);// create a new matrix by performing the Hadamard product between mat_1 and mat_2 and return it
@@ -27,4 +28,5 @@ struct Mat* MatScalar(struct Mat* mat, double scalar); // create a new matrix an
 struct Mat* MatScalarInternal(struct Mat* mat, double scalar); // multiply each element of mat by the scalar and return mat
 double Relu(double x);
 double ReluPrime(double x);
+int Softmax(const struct Mat *input, struct Mat *output);
 size_t Random(size_t min, size_t max); // generate a random number between min and max and return it
