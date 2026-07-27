@@ -10,7 +10,7 @@ struct Mat{
   size_t row;
 };
 
-struct Mat* MatCreate(size_t row, size_t col, double* data[]);
+struct Mat* MatCreate(size_t row, size_t col, double* data[], void (*f)(struct Mat* mat)); // create a matrix with the given rows and columns and initialise it with the given data array or with an activation function
 struct Mat* MatCopy(struct Mat* mat); // create a copy of mat and return it
 struct Mat* MatTranspose(struct Mat* mat); // create the transpose matrix of mat and return it
 void MatDestroy(struct Mat* mat);
@@ -29,4 +29,7 @@ struct Mat* MatScalarInternal(struct Mat* mat, double scalar); // multiply each 
 double Relu(double x);
 double ReluPrime(double x);
 int Softmax(const struct Mat *input, struct Mat *output);
-size_t Random(size_t min, size_t max); // generate a random number between min and max and return it
+double Random(double min, double max); // generate a random number between min and max and return it
+size_t RandomInt(size_t min, size_t max);
+void InitWeights(struct Mat *W);
+void InitBiases(struct Mat *B);

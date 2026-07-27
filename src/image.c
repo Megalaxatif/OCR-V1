@@ -31,16 +31,16 @@ struct Mat* GetGrayScaleMatrix(char imgFileName[]){ // loads the given image and
 
     Uint8* pixels = surface->pixels; // cast the void*
     SDL_Color* colorPalette = surface->format->palette->colors;
-    struct Mat* grayScale = MatCreate(NETWORK_IMG_SIZE*NETWORK_IMG_SIZE, 1, NULL); // the matrix must be a column matrix for the network
+    struct Mat* grayScale = MatCreate(NETWORK_IMG_SIZE*NETWORK_IMG_SIZE, 1, NULL, NULL); // the matrix must be a column matrix for the network
 
     for(size_t y = 0; y < NETWORK_IMG_SIZE; y++){
         for(size_t x = 0; x < NETWORK_IMG_SIZE; x++){
             Uint8 colorId = *(pixels + y * surface->pitch + x);
             SDL_Color color = colorPalette[colorId];
             grayScale->data[y*NETWORK_IMG_SIZE + x][0] =
-                0.299 * color.r +
-                0.587 * color.g +
-                0.114 * color.b;
+                0.299 * color.r/255 +
+                0.587 * color.g/255 +
+                0.114 * color.b/255;
         }
     }
     SDL_FreeSurface(surface);

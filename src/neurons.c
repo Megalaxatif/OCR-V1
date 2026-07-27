@@ -2,17 +2,19 @@
 #include "header/image.h"
 #include "header/math.h"
 
+static int s = 0;
+
 struct Layer* CreateLayer(size_t currentLayerNeuronCount, size_t nextLayerNeuronCount, struct Mat* weights, struct Mat* biases){
     if (currentLayerNeuronCount <= 0 || nextLayerNeuronCount <= 0){
         printf("Error: CreateLayer, neuronCounts must be > 0\n");
         return NULL;
     }
     if (weights == NULL)
-        weights = MatCreate(nextLayerNeuronCount, currentLayerNeuronCount, NULL);
+        weights = MatCreate(nextLayerNeuronCount, currentLayerNeuronCount, NULL, InitWeights);
     if (biases == NULL)
-        biases = MatCreate(nextLayerNeuronCount, 1, NULL);
-    struct Mat* preactivation = MatCreate(currentLayerNeuronCount, 1, NULL);
-    struct Mat* activation = MatCreate(currentLayerNeuronCount, 1, NULL);
+        biases = MatCreate(nextLayerNeuronCount, 1, NULL, InitBiases);
+    struct Mat* preactivation = MatCreate(currentLayerNeuronCount, 1, NULL, NULL);
+    struct Mat* activation = MatCreate(currentLayerNeuronCount, 1, NULL, NULL);
     struct Layer* newLayer = malloc(sizeof(struct Layer));
 
     newLayer->preActivation = preactivation;
@@ -68,7 +70,7 @@ int ComputeActivation(struct Layer* layer, struct Layer* nextLayer){ // calculat
     struct Mat* activation = NULL;
 
     if (nextLayer->biases->row == nextLayer->biases->col == 1){ // nextlayer is the last layer
-        activation = MatCreate(preActivation->row, 1, NULL);
+        activation = MatCreate(preActivation->row, 1, NULL, NULL);
         Softmax(preActivation, activation);
     }
     else
@@ -125,13 +127,28 @@ int Train(struct Network* network, char imgFileNames[10][100], size_t fileCount,
         ForwardPass(network);
 
         int i = network->layerCount - 1;
+        if (s == 0){
+            printf("-----GRAYSCALE-----\n");
+            MatPrint(grayScale);
+            for(int j = 0; j < network->layerCount; j++){
+                printf("-----WEIGHTS %d-----\n", j);
+                MatPrint(network->layers[j]->weights);
+                printf("-----BIASES %d-----\n", j);
+                MatPrint(network->layers[j]->biases);
+                printf("-----PREACTIVATION %d-----\n", j);
+                MatPrint(network->layers[j]->preActivation);
+                printf("-----ACTIVATION %d-----\n", j);
+                MatPrint(network->layers[j]->activation);
+            }
 
-        printf("-----RESULT------\n");
-        MatPrint(network->layers[i]->activation); // print the output layer
-        printf("-----ANSWER------\n");
-        MatPrint(answer[k]);
-        fflush(stdout);
-
+            printf("-----RESULT------\n");
+            MatPrint(network->layers[i]->activation); // print the output layer
+            printf("-----ANSWER------\n");
+            MatPrint(answer[k]);
+            fflush(stdout);
+            s++;
+        }
+        /*
         // BACKPROBAGATION----------------
         // error  of the last layer n
         // this block perform the calculation (A^n - Y)
@@ -176,24 +193,24 @@ int Train(struct Network* network, char imgFileNames[10][100], size_t fileCount,
             i--;
         }
         MatDestroy(delta); // destroy the last delta
-
+*/
         MatDestroy(grayScale);
         network->layers[0]->activation = NULL;
     }
 
-    // apply the gradiant to all layers at the end of the training
-    struct Mat* tmp = NULL;
-    for(size_t i = 0; i < (network->layerCount)-1; i++){
-        struct Layer* currentLayer = network->layers[i];
-        // TODO: try to use internal operations
-        tmp = currentLayer->biases;
-        currentLayer->biases = MatSub(tmp, MatScalarInternal(biasesGradiants[i], network->learningRate));
-        MatDestroy(tmp);
+    // // apply the gradiant to all layers at the end of the training
+    // struct Mat* tmp = NULL;
+    // for(size_t i = 0; i < (network->layerCount)-1; i++){
+    //     struct Layer* currentLayer = network->layers[i];
+    //     // TODO: try to use internal operations
+    //     tmp = currentLayer->biases;
+    //     currentLayer->biases = MatSub(tmp, MatScalarInternal(biasesGradiants[i], network->learningRate));
+    //     MatDestroy(tmp);
 
-        tmp = currentLayer->weights;
-        currentLayer->weights = MatSub(tmp, MatScalarInternal(weightGradiants[i], network->learningRate));
-        MatDestroy(tmp);
-    }
+    //     tmp = currentLayer->weights;
+    //     currentLayer->weights = MatSub(tmp, MatScalarInternal(weightGradiants[i], network->learningRate));
+    //     MatDestroy(tmp);
+    // }
 
     clear:
     for(size_t i = 0; i < network->layerCount-1; i++){
@@ -209,7 +226,7 @@ int Train(struct Network* network, char imgFileNames[10][100], size_t fileCount,
 struct Mat** GetAnswer10(){
     struct Mat** answer10 = malloc(10*sizeof(struct Mat*));
     for(int i = 0; i < 10; i++){
-        answer10[i] = MatCreate(10, 1, NULL);
+        answer10[i] = MatCreate(10, 1, NULL, NULL);
         for(int j = 0; j < 10; j++){
             answer10[i]->data[j][0] = i==j ? 1 : 0;
         }

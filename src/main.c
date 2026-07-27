@@ -5,6 +5,7 @@
 #include "header/neurons.h"
 #include <string.h>
 #include <stdlib.h>
+#include <time.h>
 
 int errorCode = 0;
 size_t* fileCount = NULL; // fileCount[i] correspond to the number of elements in files[i]
@@ -14,6 +15,7 @@ struct Mat** answer10 = NULL;
 char*** files = NULL;
 
 int main(){
+    srand(time(NULL)); // initialise the seed
     InitSDL();
     network = CreateNetwork(0.03, 4, neuronsPerLayer, NULL, NULL);
     if (network == NULL){
@@ -50,7 +52,7 @@ int main(){
             sample[i][len] = i + '0';
             sample[i][len + 1] = '/';
             sample[i][len + 2] = '\0';
-            size_t index = Random(0, fileCount[i]-1);
+            size_t index = RandomInt(0, fileCount[i]-1);
             strcat(sample[i], files[i][index]);
         }
 

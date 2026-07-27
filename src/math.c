@@ -37,8 +37,26 @@ int Softmax(const struct Mat *input, struct Mat *output){
     return 0;
 }
 
-size_t Random(size_t min, size_t max){
-    return min + rand() % (max - min + 1);
+double Random(double min, double max){
+    return min + (max - min) * ((double)rand() / RAND_MAX);
+}
+
+size_t RandomInt(size_t min, size_t max){
+    return min + (max - min) * ((size_t)rand() / RAND_MAX);
+}
+
+void InitBiases(struct Mat* B){
+    for (size_t i = 0; i < B->row; i++)
+        for (size_t j = 0; j < B->col; j++)
+            B->data[i][j] = Random(-0.01, 0.01);
+}
+
+void InitWeights(struct Mat *W){
+    double limit = sqrt(6.0 / W->col);
+
+    for (size_t i = 0; i < W->row; i++)
+        for (size_t j = 0; j < W->col; j++)
+            W->data[i][j] = Random(-limit, limit);
 }
 
 double Relu(double x){
@@ -52,7 +70,7 @@ double ReluPrime(double x){
 }
 
 
-struct Mat* MatCreate(size_t row, size_t col, double* data[]){
+struct Mat* MatCreate(size_t row, size_t col, double* data[], void (*f)(struct Mat* mat)){
     if (row <= 0 || col <= 0) {
         printf("Error: MatCreate, invalid row or col value\n");
         return NULL;
@@ -68,15 +86,16 @@ struct Mat* MatCreate(size_t row, size_t col, double* data[]){
         newMat->data[i] = malloc(col*sizeof(double));
     }
 
-    srand(time(NULL)); // initialise the seed
-    for(size_t i = 0; i < newMat->row; i++){
-        for(size_t j = 0; j < newMat->col; j++){
-            if (data != NULL)
+    if (data != NULL){
+        for(size_t i = 0; i < newMat->row; i++){
+            for(size_t j = 0; j < newMat->col; j++){
                 newMat->data[i][j] = data[i][j];
-            else
-                newMat->data[i][j] = 2.0 * ((double)rand() / RAND_MAX) - 1.0; // generates a random number between -1 and 1
+            }
         }
     }
+    else if (f != NULL)
+        f(newMat);
+
     matCount++;
     return newMat;
 }
@@ -100,7 +119,7 @@ struct Mat* MatCopy(struct Mat* mat){
         printf("Error: MatCopy, mat is NULL\n");
         return NULL;
     }
-    struct Mat* copy = MatCreate(mat->row, mat->col, mat->data);
+    struct Mat* copy = MatCreate(mat->row, mat->col, mat->data, NULL);
     return copy;
 }
 
@@ -108,7 +127,7 @@ struct Mat* MatTranspose(struct Mat* mat){
     if (mat == NULL){
         printf("Error: MatTranspose, mat is NULL\n");
     }
-    struct Mat* transpose = MatCreate(mat->col, mat->row, NULL);
+    struct Mat* transpose = MatCreate(mat->col, mat->row, NULL, NULL);
     for(size_t i = 0; i < mat->row; i++){
         for(size_t j = 0; j < mat->col; j++){
             transpose->data[j][i] = mat->data[i][j];
@@ -125,7 +144,7 @@ void MatPrint(struct Mat* mat){
     }
     for(size_t i = 0; i < mat->row; i++){
         for(size_t j = 0; j < mat->col; j++){
-            printf("%.2f ", mat->data[i][j]);
+            printf("%f ", mat->data[i][j]);
         }
         printf("\n");
     }
@@ -145,7 +164,7 @@ struct Mat* MatAdd(struct Mat* mat_1, struct Mat* mat_2){
         printf("Error: MatAdd, the matrices don't have the same size\n");
         return NULL;
     }
-    struct Mat* newMat = MatCreate(mat_1->row, mat_1->col, NULL);
+    struct Mat* newMat = MatCreate(mat_1->row, mat_1->col, NULL, NULL);
     for(size_t i = 0; i < newMat->row; i++){
         for(size_t j = 0; j < newMat->col; j++){
             newMat->data[i][j] = mat_1->data[i][j] + mat_2->data[i][j];
@@ -181,7 +200,7 @@ struct Mat* MatSub(struct Mat* mat_1, struct Mat* mat_2){
         return NULL;
     }
 
-    struct Mat* newMat = MatCreate(mat_1->row, mat_1->col, NULL);
+    struct Mat* newMat = MatCreate(mat_1->row, mat_1->col, NULL, NULL);
     for(size_t i = 0; i < newMat->row; i++){
         for(size_t j = 0; j < newMat->col; j++){
             newMat->data[i][j] = mat_1->data[i][j] - mat_2->data[i][j];
@@ -210,7 +229,7 @@ struct Mat* MatHadamard(struct Mat* mat_1, struct Mat* mat_2){
         printf("Error: MatHadamard, the matrices don't have the same size\n");
         return NULL;
     }
-    struct Mat* newMat = MatCreate(mat_1->row, mat_1->col, NULL);
+    struct Mat* newMat = MatCreate(mat_1->row, mat_1->col, NULL, NULL);
     for(size_t i = 0; i < newMat->row; i++){
         for(size_t j = 0; j < newMat->col; j++){
             newMat->data[i][j] = mat_1->data[i][j] * mat_2->data[i][j];
@@ -238,7 +257,7 @@ struct Mat* MatMult(struct Mat* mat_1, struct Mat* mat_2){
         printf("Error: MatMult, the matrices don't have compatible size\n");
         return NULL;
     }
-    struct Mat* res = MatCreate(mat_1->row, mat_2->col, NULL);
+    struct Mat* res = MatCreate(mat_1->row, mat_2->col, NULL, NULL);
     for(size_t j = 0; j < mat_2->col; j++){
         for(size_t i = 0; i < mat_1->row; i++){
             double tmp = 0;
@@ -260,7 +279,7 @@ struct Mat* MatFunc(struct Mat* mat, double (*f)(double)){
         printf("Error: MatFunc, the function is NULL\n");
         return NULL;
     }
-    struct Mat* newMat = MatCreate(mat->row, mat->col, NULL);
+    struct Mat* newMat = MatCreate(mat->row, mat->col, NULL, NULL);
     for(size_t i = 0; i < newMat->row; i++){
         for(size_t j = 0; j < newMat->col; j++){
             newMat->data[i][j] = f(mat->data[i][j]);
@@ -291,7 +310,7 @@ struct Mat* MatScalar(struct Mat* mat, double scalar){
         printf("Error: MatScalar, the matrix is NULL\n");
         return NULL;
     }
-    struct Mat* newMat = MatCreate(mat->row, mat->col, NULL);
+    struct Mat* newMat = MatCreate(mat->row, mat->col, NULL, NULL);
     for(size_t i = 0; i < newMat->row; i++){
         for(size_t j = 0; j < newMat->col; j++){
             newMat->data[i][j] = scalar * mat->data[i][j];
