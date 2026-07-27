@@ -2,7 +2,6 @@
 #include "header/image.h"
 #include "header/math.h"
 
-static int s = 0;
 
 struct Layer* CreateLayer(size_t currentLayerNeuronCount, size_t nextLayerNeuronCount, struct Mat* weights, struct Mat* biases){
     if (currentLayerNeuronCount <= 0 || nextLayerNeuronCount <= 0){
@@ -127,28 +126,13 @@ int Train(struct Network* network, char imgFileNames[10][100], size_t fileCount,
         ForwardPass(network);
 
         int i = network->layerCount - 1;
-        if (s == 0){
-            printf("-----GRAYSCALE-----\n");
-            MatPrint(grayScale);
-            for(int j = 0; j < network->layerCount; j++){
-                printf("-----WEIGHTS %d-----\n", j);
-                MatPrint(network->layers[j]->weights);
-                printf("-----BIASES %d-----\n", j);
-                MatPrint(network->layers[j]->biases);
-                printf("-----PREACTIVATION %d-----\n", j);
-                MatPrint(network->layers[j]->preActivation);
-                printf("-----ACTIVATION %d-----\n", j);
-                MatPrint(network->layers[j]->activation);
-            }
 
-            printf("-----RESULT------\n");
-            MatPrint(network->layers[i]->activation); // print the output layer
-            printf("-----ANSWER------\n");
-            MatPrint(answer[k]);
-            fflush(stdout);
-            s++;
-        }
-        /*
+        printf("-----RESULT------\n");
+        MatPrint(network->layers[i]->activation); // print the output layer
+        printf("-----ANSWER------\n");
+        MatPrint(answer[k]);
+        fflush(stdout);
+
         // BACKPROBAGATION----------------
         // error  of the last layer n
         // this block perform the calculation (A^n - Y)
@@ -193,24 +177,24 @@ int Train(struct Network* network, char imgFileNames[10][100], size_t fileCount,
             i--;
         }
         MatDestroy(delta); // destroy the last delta
-*/
+
         MatDestroy(grayScale);
         network->layers[0]->activation = NULL;
     }
 
-    // // apply the gradiant to all layers at the end of the training
-    // struct Mat* tmp = NULL;
-    // for(size_t i = 0; i < (network->layerCount)-1; i++){
-    //     struct Layer* currentLayer = network->layers[i];
-    //     // TODO: try to use internal operations
-    //     tmp = currentLayer->biases;
-    //     currentLayer->biases = MatSub(tmp, MatScalarInternal(biasesGradiants[i], network->learningRate));
-    //     MatDestroy(tmp);
+    // apply the gradiant to all layers at the end of the training
+    struct Mat* tmp = NULL;
+    for(size_t i = 0; i < (network->layerCount)-1; i++){
+        struct Layer* currentLayer = network->layers[i];
+        // TODO: try to use internal operations
+        tmp = currentLayer->biases;
+        currentLayer->biases = MatSub(tmp, MatScalarInternal(biasesGradiants[i], network->learningRate));
+        MatDestroy(tmp);
 
-    //     tmp = currentLayer->weights;
-    //     currentLayer->weights = MatSub(tmp, MatScalarInternal(weightGradiants[i], network->learningRate));
-    //     MatDestroy(tmp);
-    // }
+        tmp = currentLayer->weights;
+        currentLayer->weights = MatSub(tmp, MatScalarInternal(weightGradiants[i], network->learningRate));
+        MatDestroy(tmp);
+    }
 
     clear:
     for(size_t i = 0; i < network->layerCount-1; i++){

@@ -7,9 +7,10 @@
 #include <stdlib.h>
 #include <time.h>
 
+long long counter = 0;
 int errorCode = 0;
 size_t* fileCount = NULL; // fileCount[i] correspond to the number of elements in files[i]
-int neuronsPerLayer[] = {NETWORK_IMG_SIZE*NETWORK_IMG_SIZE, 16, 16, 10};
+int neuronsPerLayer[] = {NETWORK_IMG_SIZE*NETWORK_IMG_SIZE, 256, 128, 64, 10};
 struct Network* network = NULL;
 struct Mat** answer10 = NULL;
 char*** files = NULL;
@@ -17,7 +18,7 @@ char*** files = NULL;
 int main(){
     srand(time(NULL)); // initialise the seed
     InitSDL();
-    network = CreateNetwork(0.03, 4, neuronsPerLayer, NULL, NULL);
+    network = CreateNetwork(0.01, 5, neuronsPerLayer, NULL, NULL);
     if (network == NULL){
         printf("Error: main, network is NULL\n");
         errorCode = 1;
@@ -58,6 +59,7 @@ int main(){
 
         // train with the sample
         Train(network, sample, 10, answer10);
+        printf("%lld\n", counter++);
         // SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
         // SDL_SetRenderTarget(renderer, NULL);
         // SDL_RenderClear(renderer);
