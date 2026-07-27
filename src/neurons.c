@@ -2,6 +2,8 @@
 #include "header/image.h"
 #include "header/math.h"
 
+double correctCounter = 0;
+double counter = 0;
 
 struct Layer* CreateLayer(size_t currentLayerNeuronCount, size_t nextLayerNeuronCount, struct Mat* weights, struct Mat* biases){
     if (currentLayerNeuronCount <= 0 || nextLayerNeuronCount <= 0){
@@ -127,14 +129,24 @@ int Train(struct Network* network, char imgFileNames[10][100], size_t fileCount,
 
         int i = network->layerCount - 1;
 
-        printf("-----RESULT------\n");
-        MatPrint(network->layers[i]->activation); // print the output layer
-        printf("-----ANSWER------\n");
-        MatPrint(answer[k]);
-        fflush(stdout);
+        struct Mat* lastLayerActivation = network->layers[i]->activation;
+        double biggest = lastLayerActivation->data[0][0];
+        int biggestIndex = 0;
+        for(int j = 1; j < lastLayerActivation->row; j++){
+            double n = lastLayerActivation->data[j][0];
+            if (n > biggest){
+                biggest = n;
+                biggestIndex = j;
+            }
+        }
+
+        counter++;
+        if (biggestIndex == k)
+            correctCounter++;
+        printf("SCORE: %f\n", correctCounter/counter);
 
         // BACKPROBAGATION----------------
-        // error  of the last layer n
+        // error  of the last layer
         // this block perform the calculation (A^n - Y)
         // From what I calculated it should be (A^n - Y) ⊙ f'(Z^n) but we use softmax for the last layer so some magic happens and we remove the last term
         struct Mat* delta = MatSub(network->layers[i]->activation, answer[k]);
@@ -183,17 +195,10 @@ int Train(struct Network* network, char imgFileNames[10][100], size_t fileCount,
     }
 
     // apply the gradiant to all layers at the end of the training
-    struct Mat* tmp = NULL;
     for(size_t i = 0; i < (network->layerCount)-1; i++){
         struct Layer* currentLayer = network->layers[i];
-        // TODO: try to use internal operations
-        tmp = currentLayer->biases;
-        currentLayer->biases = MatSub(tmp, MatScalarInternal(biasesGradiants[i], network->learningRate));
-        MatDestroy(tmp);
-
-        tmp = currentLayer->weights;
-        currentLayer->weights = MatSub(tmp, MatScalarInternal(weightGradiants[i], network->learningRate));
-        MatDestroy(tmp);
+        currentLayer->biases = MatSubInternal(currentLayer->biases, MatScalarInternal(biasesGradiants[i], network->learningRate));
+        currentLayer->weights = MatSubInternal(currentLayer->weights, MatScalarInternal(weightGradiants[i], network->learningRate));
     }
 
     clear:

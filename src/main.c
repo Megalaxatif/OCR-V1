@@ -1,13 +1,11 @@
 #include "header/files.h"
 #include "header/math.h"
 #include "header/init.h"
-#include "header/image.h"
 #include "header/neurons.h"
 #include <string.h>
 #include <stdlib.h>
 #include <time.h>
 
-long long counter = 0;
 int errorCode = 0;
 size_t* fileCount = NULL; // fileCount[i] correspond to the number of elements in files[i]
 int neuronsPerLayer[] = {NETWORK_IMG_SIZE*NETWORK_IMG_SIZE, 256, 128, 64, 10};
@@ -59,7 +57,6 @@ int main(){
 
         // train with the sample
         Train(network, sample, 10, answer10);
-        printf("%lld\n", counter++);
         // SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
         // SDL_SetRenderTarget(renderer, NULL);
         // SDL_RenderClear(renderer);
