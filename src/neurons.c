@@ -125,7 +125,11 @@ int Train(struct Network* network, char imgFileNames[10][100], size_t fileCount,
         // use the grayScale as the activation value of the input layer
         network->layers[0]->activation = grayScale;
 
-        ForwardPass(network);
+        errorCode = ForwardPass(network);
+        if (errorCode != 0){
+            printf("Error: Train, ForwardPass returned %d\n", errorCode);
+            goto clear;
+        }
 
         int i = network->layerCount - 1;
 
