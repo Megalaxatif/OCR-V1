@@ -35,9 +35,9 @@ struct Mat* GetGrayScaleMatrix(char* imgFileName){ // loads the given image and 
             Uint8 colorId = *(pixels + y * surface->pitch + x);
             SDL_Color color = colorPalette[colorId];
             grayScale->data[y][x] =
-                0.299 * color.r +
-                0.587 * color.g +
-                0.114 * color.b;
+                0.299 * color.r/255 +
+                0.587 * color.g/255 +
+                0.114 * color.b/255;
         }
     }
     SDL_FreeSurface(surface);
@@ -93,8 +93,8 @@ int DrawGrayScale(struct Mat* grayScale){
 
     for(size_t y = 0; y < grayScale->row; y++){
         for(size_t x = 0; x < grayScale->col; x++){
-            Uint8 grayCode = grayScale->data[y][x];
-            SDL_SetRenderDrawColor(renderer, grayCode, grayCode, grayCode, 255);
+            double grayCode = grayScale->data[y][x];
+            SDL_SetRenderDrawColor(renderer, grayCode*255, grayCode*255, grayCode*255, 255);
             SDL_RenderDrawPoint(renderer, x, y);
         }
     }
