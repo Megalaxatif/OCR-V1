@@ -1,4 +1,5 @@
 #include "header/files.h"
+#include "header/image.h"
 #include "header/math.h"
 #include "header/init.h"
 #include "header/neurons.h"
@@ -20,7 +21,7 @@ int main(){
 
     char** sample10 = malloc(10 * sizeof(char*));
     for(int i = 0; i < 10; i++){
-        sample10[i] = malloc(100*sizeof(char));
+        sample10[i] = malloc(100 * sizeof(char));
     }
 
     network = CreateNetwork(0.02, 3, neuronsPerLayer, NULL, NULL);
@@ -45,27 +46,33 @@ int main(){
     SDL_Event event;
     int running = 1;
 
+    struct Mat* grayScale = GetGrayScaleMatrix("/home/megalaxatif/Documents/code/OCR/test grid.png");
     while (running){
         while (SDL_PollEvent(&event)){
             if (event.type == SDL_QUIT)
                 running = 0;
         }
 
-        errorCode = GetSample10(&sample10, files, fileCount);
-        if (errorCode != 0){
-            printf("Error: main, GetSample10 returned %d\n", errorCode);
-            goto cleanup;
-        }
-        // train with the sample
-        Train(network, sample10, 10, answer10);
-        // SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
-        // SDL_SetRenderTarget(renderer, NULL);
-        // SDL_RenderClear(renderer);
+        // errorCode = GetSample10(&sample10, files, fileCount);
+        // if (errorCode != 0){
+        //     printf("Error: main, GetSample10 returned %d\n", errorCode);
+        //     goto cleanup;
+        // }
+        // // train with the sample
+        // Train(network, sample10, 10, answer10);
 
-        // SDL_RenderPresent(renderer);
-        // SDL_Delay(100); // delay to limit the frame rate
+        SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+        SDL_SetRenderTarget(renderer, NULL);
+        SDL_RenderClear(renderer);
+
+        // render
+        DrawGrayScale(grayScale);
+
+        SDL_RenderPresent(renderer);
+        SDL_Delay(100); // delay to limit the frame rate
     }
     cleanup:
+    MatDestroy(grayScale);
     // clean sample
     if (sample10 != NULL){
         for(int i = 0; i < 10; i++){

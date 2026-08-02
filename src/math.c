@@ -144,7 +144,7 @@ void MatPrint(struct Mat* mat){
     }
     for(size_t i = 0; i < mat->row; i++){
         for(size_t j = 0; j < mat->col; j++){
-            printf("%f ", mat->data[i][j]);
+            printf("%.1f ", mat->data[i][j]);
         }
         printf("\n");
     }

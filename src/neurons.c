@@ -116,7 +116,7 @@ int Train(struct Network* network, char** sample, size_t sampleSize, struct Mat*
     network->layers[0]->activation = NULL;
 
     for(size_t k = 0; k < sampleSize; k++){
-        struct Mat* grayScale = GetGrayScaleMatrix(sample[k]);
+        struct Mat* grayScale = GetTrainingGrayScaleMatrix(sample[k]);
         if (grayScale == NULL){
             printf("Error: Train, the grayScale matrix is NULL\n");
             errorCode = 3;
