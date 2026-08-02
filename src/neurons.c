@@ -97,8 +97,8 @@ int ForwardPass(struct Network* network){
     return 0;
 }
 
-int Train(struct Network* network, char imgFileNames[10][100], size_t fileCount, struct Mat* answer[]){
-    if (fileCount < 1||network == NULL || imgFileNames == NULL || answer == NULL){
+int Train(struct Network* network, char** sample, size_t sampleSize, struct Mat* answer[]){
+    if (sampleSize < 1||network == NULL || sample == NULL || answer == NULL){
         printf("Error: Train, invalid arguments\n");
         return 1;
     }
@@ -115,8 +115,8 @@ int Train(struct Network* network, char imgFileNames[10][100], size_t fileCount,
     MatDestroy(network->layers[0]->activation); // destroy the first activation
     network->layers[0]->activation = NULL;
 
-    for(size_t k = 0; k < fileCount; k++){
-        struct Mat* grayScale = GetGrayScaleMatrix(imgFileNames[k]);
+    for(size_t k = 0; k < sampleSize; k++){
+        struct Mat* grayScale = GetGrayScaleMatrix(sample[k]);
         if (grayScale == NULL){
             printf("Error: Train, the grayScale matrix is NULL\n");
             errorCode = 3;

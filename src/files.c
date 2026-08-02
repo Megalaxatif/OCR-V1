@@ -1,9 +1,29 @@
 #include "header/files.h"
 #include "header/init.h"
+#include "header/math.h"
 #include <stdio.h>
 #include <dirent.h>
 #include <stdlib.h>
 #include <string.h>
+
+int GetSample10(char*** sample, char*** files, size_t* fileCount){
+    if (sample == NULL || files == NULL || fileCount == NULL){
+        printf("Error: GetSample10, invalid argument\n");
+        return 1;
+    }
+
+    int len = strlen(TRAIN_DIRECTORY_PATH);
+    for(int i = 0; i < 10; i++){
+        char* currentPath = (*sample)[i];
+        strcpy(currentPath, TRAIN_DIRECTORY_PATH);
+        currentPath[len] = i + '0';
+        currentPath[len + 1] = '/';
+        currentPath[len + 2] = '\0';
+        size_t index = RandomInt(0, fileCount[i]-1);
+        strcat(currentPath, files[i][index]);
+    }
+    return 0;
+}
 
 char*** GetAllTrainingFileNames(size_t** _fileCount){
     if (_fileCount == NULL){

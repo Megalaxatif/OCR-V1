@@ -5,10 +5,11 @@
 #include <string.h>
 #include <stdlib.h>
 #include <time.h>
+#include <stdlib.h>
 
 int errorCode = 0;
 size_t* fileCount = NULL; // fileCount[i] correspond to the number of elements in files[i]
-int neuronsPerLayer[] = {NETWORK_IMG_SIZE*NETWORK_IMG_SIZE, 256, 128, 64, 10};
+int neuronsPerLayer[] = {NETWORK_IMG_SIZE*NETWORK_IMG_SIZE, 16, 10};
 struct Network* network = NULL;
 struct Mat** answer10 = NULL;
 char*** files = NULL;
@@ -16,7 +17,13 @@ char*** files = NULL;
 int main(){
     srand(time(NULL)); // initialise the seed
     InitSDL();
-    network = CreateNetwork(0.01, 5, neuronsPerLayer, NULL, NULL);
+
+    char** sample10 = malloc(10 * sizeof(char*));
+    for(int i = 0; i < 10; i++){
+        sample10[i] = malloc(100*sizeof(char));
+    }
+
+    network = CreateNetwork(0.02, 3, neuronsPerLayer, NULL, NULL);
     if (network == NULL){
         printf("Error: main, network is NULL\n");
         errorCode = 1;
@@ -43,20 +50,14 @@ int main(){
             if (event.type == SDL_QUIT)
                 running = 0;
         }
-        // create the sample
-        char sample[10][100];
-        int len = strlen(TRAIN_DIRECTORY_PATH);
-        for(int i = 0; i < 10; i++){
-            strcpy(sample[i], TRAIN_DIRECTORY_PATH);
-            sample[i][len] = i + '0';
-            sample[i][len + 1] = '/';
-            sample[i][len + 2] = '\0';
-            size_t index = RandomInt(0, fileCount[i]-1);
-            strcat(sample[i], files[i][index]);
-        }
 
+        errorCode = GetSample10(&sample10, files, fileCount);
+        if (errorCode != 0){
+            printf("Error: main, GetSample10 returned %d\n", errorCode);
+            goto cleanup;
+        }
         // train with the sample
-        Train(network, sample, 10, answer10);
+        Train(network, sample10, 10, answer10);
         // SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
         // SDL_SetRenderTarget(renderer, NULL);
         // SDL_RenderClear(renderer);
@@ -65,7 +66,15 @@ int main(){
         // SDL_Delay(100); // delay to limit the frame rate
     }
     cleanup:
+    // clean sample
+    if (sample10 != NULL){
+        for(int i = 0; i < 10; i++){
+            free(sample10[i]);
+        }
+        free(sample10);
+    }
 
+    // clean answer
     if (answer10 != NULL){
         for(int i = 0; i < 10; i++){
             MatDestroy(answer10[i]);
@@ -84,10 +93,12 @@ int main(){
         free(files);
     }
 
+    // clean fileCount
     if (fileCount != NULL){
         free(fileCount);
     }
 
+    // clean network and sdl
     DestroyNetwork(network);
     DestroySDL();
 
