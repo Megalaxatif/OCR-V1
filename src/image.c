@@ -5,6 +5,7 @@
 #include <SDL2/SDL_pixels.h>
 #include <SDL2/SDL_render.h>
 #include <SDL2/SDL_surface.h>
+#include <stdalign.h>
 
 int DrawHorizontalLines(SDL_Point* horizontalLines, size_t pointCount){
     if (horizontalLines == NULL || pointCount < 2){
@@ -41,18 +42,30 @@ SDL_Point* ScanHorizontalLines(struct Mat* grayScale, size_t* pointCount_){
                 if (grayCode == 0)
                     currentLineLength++;
                 else {
-                    if (currentLineLength > 100){ // ignore little lines
-                        // TODO: remove that and use a point buffer instead (use one similar to minimake)
-                        if (pointCount + 2 >= pointArraySize){
-                            printf("Error: ScanHorizontalLines, the point array is full\n");
-                            return points;
+                    int isHole = 0;
+                    int i = 1;
+                    while(x+i < grayScale->col && i < 20){
+                        if (grayScale->data[y][x+i] == 0){
+                            x += i;
+                            isHole = 1;
+                            break;
                         }
-                        points[pointCount] = firstPoint;
-                        points[pointCount+1] = (SDL_Point){.x = x, .y = y};
-                        pointCount+=2;
+                        i++;
                     }
-                    currentLineLength = 0;
-                    inLine = 0;
+                    if (!isHole) { // end of the line
+                        if (currentLineLength > 100){ // ignore little lines
+                            // TODO: remove that and use a point buffer instead (use one similar to minimake)
+                            if (pointCount + 2 >= pointArraySize){
+                                printf("Error: ScanHorizontalLines, the point array is full\n");
+                                return points;
+                            }
+                            points[pointCount] = firstPoint;
+                            points[pointCount+1] = (SDL_Point){.x = x, .y = y};
+                            pointCount+=2;
+                        }
+                        currentLineLength = 0;
+                        inLine = 0;
+                    }
                 }
             }
             else {
