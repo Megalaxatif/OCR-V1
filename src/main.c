@@ -46,7 +46,7 @@ int main(){
     SDL_Event event;
     int running = 1;
 
-    struct Mat* grayScale = GetGrayScaleMatrix("/home/megalaxatif/Documents/code/OCR/test grid.png");
+    struct Mat* grayScale = GetGridGrayScaleMatrix("/home/megalaxatif/Documents/code/OCR/sudoku.jpg");
     while (running){
         while (SDL_PollEvent(&event)){
             if (event.type == SDL_QUIT)
