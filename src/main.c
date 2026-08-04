@@ -43,10 +43,12 @@ int main(){
         goto cleanup;
     }
 
+    struct Mat* grayScale = GetGridGrayScaleMatrix("/home/megalaxatif/Documents/code/OCR/sudoku.jpg");
+    size_t horizontalPointCount = 0;
+    SDL_Point* horizontalLines = ScanHorizontalLines(grayScale, &horizontalPointCount);
+
     SDL_Event event;
     int running = 1;
-
-    struct Mat* grayScale = GetGridGrayScaleMatrix("/home/megalaxatif/Documents/code/OCR/sudoku.jpg");
     while (running){
         while (SDL_PollEvent(&event)){
             if (event.type == SDL_QUIT)
@@ -67,11 +69,14 @@ int main(){
 
         // render
         DrawGrayScale(grayScale);
+        DrawHorizontalLines(horizontalLines, horizontalPointCount);
 
         SDL_RenderPresent(renderer);
         SDL_Delay(100); // delay to limit the frame rate
     }
+
     cleanup:
+    free(horizontalLines);
     MatDestroy(grayScale);
     // clean sample
     if (sample10 != NULL){

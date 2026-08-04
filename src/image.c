@@ -6,6 +6,72 @@
 #include <SDL2/SDL_render.h>
 #include <SDL2/SDL_surface.h>
 
+int DrawHorizontalLines(SDL_Point* horizontalLines, size_t pointCount){
+    if (horizontalLines == NULL || pointCount < 2){
+        printf("Error: DrawHorizontalLines, invalid argument\n");
+        return 1;
+    }
+    SDL_SetRenderTarget(renderer, NULL);
+    SDL_SetRenderDrawColor(renderer, 255, 0, 0, 128);
+    for(int i = 0; i < pointCount; i += 2 ){
+        SDL_Point firstPoint = horizontalLines[i];
+        SDL_Point secondPoint = horizontalLines[i+1];
+        SDL_RenderDrawLine(renderer, firstPoint.x, firstPoint.y, secondPoint.x, secondPoint.y);
+    }
+    return 0;
+}
+
+SDL_Point* ScanHorizontalLines(struct Mat* grayScale, size_t* pointCount_){
+    if (grayScale == NULL){
+        printf("Error: ScanHorizontalLines, grayScale is NULL\n");
+        return NULL;
+    }
+    // TODO: remove that and use a point buffer instead (use one similar to minimake)
+    const int pointArraySize = 2000;
+    SDL_Point* points = malloc(pointArraySize* sizeof(SDL_Point));
+
+    SDL_Point firstPoint = {.x = 0, .y = 0}; // first point of the line
+    size_t pointCount = 0;
+    int inLine = 0; // boolean
+    size_t currentLineLength = 0;
+    for(size_t y = 0; y < grayScale->row; y++){
+        for(size_t x = 0; x < grayScale->col; x++){
+            int grayCode = grayScale->data[y][x];
+            if (inLine){
+                if (grayCode == 0)
+                    currentLineLength++;
+                else {
+                    if (currentLineLength > 100){ // ignore little lines
+                        // TODO: remove that and use a point buffer instead (use one similar to minimake)
+                        if (pointCount + 2 >= pointArraySize){
+                            printf("Error: ScanHorizontalLines, the point array is full\n");
+                            return points;
+                        }
+                        points[pointCount] = firstPoint;
+                        points[pointCount+1] = (SDL_Point){.x = x, .y = y};
+                        pointCount+=2;
+                    }
+                    currentLineLength = 0;
+                    inLine = 0;
+                }
+            }
+            else {
+                if (grayCode == 0){ // we are going inside a potential line
+                    firstPoint.x = x;
+                    firstPoint.y = y;
+                    currentLineLength++;
+                    inLine = 1;
+                }
+            }
+        }
+        currentLineLength = 0;
+        inLine = 0;
+    }
+    *pointCount_ = pointCount;
+    return points;
+}
+
+
 struct Mat* GetGridGrayScaleMatrix(char* imgFileName){ // loads the given image and returns a matrix of its grayscale
     if (imgFileName == NULL){
         printf("Error: GetGridGrayScaleMatrix, imgFileName is NULL\n");
