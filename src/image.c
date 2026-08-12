@@ -7,83 +7,105 @@
 #include <SDL2/SDL_surface.h>
 #include <stdalign.h>
 
-int DrawHorizontalLines(SDL_Point* horizontalLines, size_t pointCount){
-    if (horizontalLines == NULL || pointCount < 2){
+int DrawHorizontalLines(SDL_Rect* horizontalLines, size_t lineCount){
+    if (horizontalLines == NULL || lineCount < 2){
         printf("Error: DrawHorizontalLines, invalid argument\n");
         return 1;
     }
     SDL_SetRenderTarget(renderer, NULL);
-    SDL_SetRenderDrawColor(renderer, 255, 0, 0, 128);
-    for(int i = 0; i < pointCount; i += 2 ){
-        SDL_Point firstPoint = horizontalLines[i];
-        SDL_Point secondPoint = horizontalLines[i+1];
-        SDL_RenderDrawLine(renderer, firstPoint.x, firstPoint.y, secondPoint.x, secondPoint.y);
+    int colorOffset = 255;
+    for(int i = 0; i < lineCount; i++ ){
+        SDL_SetRenderDrawColor(renderer, colorOffset, 0,0, 128);
+        SDL_RenderDrawRect(renderer, horizontalLines+i);
+        //colorOffset = colorOffset - 20;
+        //if (colorOffset <100) colorOffset = 255;
     }
     return 0;
 }
 
-SDL_Point* ScanHorizontalLines(struct Mat* grayScale, size_t* pointCount_){
+SDL_Rect* ScanHorizontalLines(struct Mat* grayScale, size_t* lineCount_){
     if (grayScale == NULL){
         printf("Error: ScanHorizontalLines, grayScale is NULL\n");
         return NULL;
     }
     // TODO: remove that and use a point buffer instead (use one similar to minimake)
-    const int pointArraySize = 2000;
-    SDL_Point* points = malloc(pointArraySize* sizeof(SDL_Point));
+    const int lineArraySize = 2000;
+    SDL_Rect* lines = malloc(lineArraySize* sizeof(SDL_Rect));
 
-    SDL_Point firstPoint = {.x = 0, .y = 0}; // first point of the line
-    size_t pointCount = 0;
-    int inLine = 0; // boolean
-    size_t currentLineLength = 0;
+    size_t lineCount = 0;
     for(size_t y = 0; y < grayScale->row; y++){
+        SDL_Rect currentLine = {.x = 0, .y = y, .w = 0, .h = 0}; // first point of the line
+        int inLine = 0; // boolean
         for(size_t x = 0; x < grayScale->col; x++){
             int grayCode = grayScale->data[y][x];
             if (inLine){
                 if (grayCode == 0)
-                    currentLineLength++;
+                    currentLine.w++;
                 else {
                     int isHole = 0;
                     int i = 1;
-                    while(x+i < grayScale->col && i < 20){
+                    while(x+i < grayScale->col && i < grayScale->col/30){
                         if (grayScale->data[y][x+i] == 0){
                             x += i;
+                            currentLine.w += i;
                             isHole = 1;
                             break;
                         }
                         i++;
                     }
                     if (!isHole) { // end of the line
-                        if (currentLineLength > 100){ // ignore little lines
+                        if (currentLine.w > grayScale->col/4){ // ignore little lines
                             // TODO: remove that and use a point buffer instead (use one similar to minimake)
-                            if (pointCount + 2 >= pointArraySize){
-                                printf("Error: ScanHorizontalLines, the point array is full\n");
-                                return points;
+                            lines[lineCount] = currentLine;
+                            lineCount++;
+                            if (lineCount >= lineArraySize){
+                                printf("Error: ScanHorizontalLines, the line array is full\n");
+                                free(lines);
+                                return NULL;
                             }
-                            points[pointCount] = firstPoint;
-                            points[pointCount+1] = (SDL_Point){.x = x, .y = y};
-                            pointCount+=2;
                         }
-                        currentLineLength = 0;
                         inLine = 0;
+                        currentLine.w = 0;
                     }
                 }
             }
             else {
                 if (grayCode == 0){ // we are going inside a potential line
-                    firstPoint.x = x;
-                    firstPoint.y = y;
-                    currentLineLength++;
+                    currentLine.w++;
+                    currentLine.x = x;
                     inLine = 1;
                 }
             }
         }
-        currentLineLength = 0;
-        inLine = 0;
     }
-    *pointCount_ = pointCount;
-    return points;
+    *lineCount_ = lineCount;
+    return lines;
 }
 
+// SDL_Rect* ConvertHorizontalLinesToRect(SDL_Point* points, size_t pointCount, size_t* rectCount_){ // convert adjacent horizontal lines into a rectangle
+//     if (points == NULL || rectCount_ == NULL || pointCount < 0||pointCount %2 != 0){
+//         printf("Error: ConvertHorizontalLinesToRect, invalid argument");
+//         return NULL;
+//     }
+//     SDL_Rect* rectList = malloc(200*sizeof(struct SDL_Rect)); // TODO: change this constant to use buffer just like in ScanHorizontalLines
+//     int rectCount = 0;
+//     int lastPoint = points[0].y;
+//     int lineCount = 1; // count the number of lines to merge into the rectangle
+//     for (size_t i = 1; i < pointCount/2; i++){
+//         SDL_Point currentPoint = points[i*2];
+//         if (currentPoint.y == lastY+1 && ){
+//             lineCount++;
+//         }
+//         else{
+//             if (lineCount != 0){
+//                 rectList[rectCount] = (SDL_Rect){};
+//                 lineCount = 0;
+//             }
+//         }
+//         lastY = points[i].y;
+//     }
+//     return rectList;
+// }
 
 struct Mat* GetGridGrayScaleMatrix(char* imgFileName){ // loads the given image and returns a matrix of its grayscale
     if (imgFileName == NULL){

@@ -10,7 +10,7 @@
 
 int errorCode = 0;
 size_t* fileCount = NULL; // fileCount[i] correspond to the number of elements in files[i]
-int neuronsPerLayer[] = {NETWORK_IMG_SIZE*NETWORK_IMG_SIZE, 16, 10};
+int neuronsPerLayer[] = {NETWORK_IMG_SIZE*NETWORK_IMG_SIZE, 7, 10};
 struct Network* network = NULL;
 struct Mat** answer10 = NULL;
 char*** files = NULL;
@@ -45,7 +45,7 @@ int main(){
 
     struct Mat* grayScale = GetGridGrayScaleMatrix("/home/megalaxatif/Documents/code/OCR/sudoku.jpg");
     size_t horizontalPointCount = 0;
-    SDL_Point* horizontalLines = ScanHorizontalLines(grayScale, &horizontalPointCount);
+    SDL_Rect* horizontalLines = ScanHorizontalLines(grayScale, &horizontalPointCount);
 
     SDL_Event event;
     int running = 1;
@@ -55,24 +55,24 @@ int main(){
                 running = 0;
         }
 
-        // errorCode = GetSample10(&sample10, files, fileCount);
-        // if (errorCode != 0){
-        //     printf("Error: main, GetSample10 returned %d\n", errorCode);
-        //     goto cleanup;
-        // }
-        // // train with the sample
-        // Train(network, sample10, 10, answer10);
+        errorCode = GetSample10(&sample10, files, fileCount);
+        if (errorCode != 0){
+            printf("Error: main, GetSample10 returned %d\n", errorCode);
+            goto cleanup;
+        }
+        // train with the sample
+        Train(network, sample10, 10, answer10);
 
         SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
         SDL_SetRenderTarget(renderer, NULL);
         SDL_RenderClear(renderer);
 
-        // render
+        // // render
         DrawGrayScale(grayScale);
         DrawHorizontalLines(horizontalLines, horizontalPointCount);
 
         SDL_RenderPresent(renderer);
-        SDL_Delay(100); // delay to limit the frame rate
+        //SDL_Delay(100); // delay to limit the frame rate
     }
 
     cleanup:
