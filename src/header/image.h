@@ -1,9 +1,10 @@
 #pragma once
 #include <SDL2/SDL.h>
 #include "math.h"
-// return a dynamically allocated array of SDL_Point where (array[i], array[i+1]) correspond to the 2 ends of an horizontal line on the image, it also ignores little lines
+// produce an array of SDL_Rect corresponding to the dimensions of each horizontal black lines on the grayScale (height is always set to 0), it also ignores little lines
 SDL_Rect* ScanHorizontalLines(struct Mat* grayScale, size_t* lineCount_);
-int DrawHorizontalLines(SDL_Rect* horizontalLines, size_t lineCount);
+SDL_Rect* ConvertHorizontalLinesToBlocks(SDL_Rect* lines, size_t lineCount, size_t* blockCount_); // gather the adjacent lines produced by ScanHorizontalLines to form blocs
+int DrawRect(SDL_Rect* rects, size_t rectCount);
 struct Mat* GetGridGrayScaleMatrix(char* imgFileName);
 // does the exact same as GetGrayScaleMatrix but stores the result in a column matrix so that it can be used for the network
 struct Mat* GetTrainingGrayScaleMatrix(char imgFileName[]);

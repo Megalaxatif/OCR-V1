@@ -10,7 +10,7 @@
 
 int errorCode = 0;
 size_t* fileCount = NULL; // fileCount[i] correspond to the number of elements in files[i]
-int neuronsPerLayer[] = {NETWORK_IMG_SIZE*NETWORK_IMG_SIZE, 7, 10};
+int neuronsPerLayer[] = {NETWORK_IMG_SIZE*NETWORK_IMG_SIZE, 10, 10};
 struct Network* network = NULL;
 struct Mat** answer10 = NULL;
 char*** files = NULL;
@@ -43,9 +43,11 @@ int main(){
         goto cleanup;
     }
 
-    struct Mat* grayScale = GetGridGrayScaleMatrix("/home/megalaxatif/Documents/code/OCR/sudoku.jpg");
-    size_t horizontalPointCount = 0;
-    SDL_Rect* horizontalLines = ScanHorizontalLines(grayScale, &horizontalPointCount);
+    struct Mat* grayScale = GetGridGrayScaleMatrix("/home/megalaxatif/Documents/code/OCR/test3.png");
+    size_t horizontalLineCount = 0;
+    SDL_Rect* horizontalLines = ScanHorizontalLines(grayScale, &horizontalLineCount);
+    size_t horizontalBlockCount = 0;
+    SDL_Rect* horizontalBlocks = ConvertHorizontalLinesToBlocks(horizontalLines, horizontalLineCount, &horizontalBlockCount);
 
     SDL_Event event;
     int running = 1;
@@ -67,16 +69,28 @@ int main(){
         SDL_SetRenderTarget(renderer, NULL);
         SDL_RenderClear(renderer);
 
-        // // render
+        // render
         DrawGrayScale(grayScale);
-        DrawHorizontalLines(horizontalLines, horizontalPointCount);
+        DrawRect(horizontalLines, horizontalLineCount);
+        //DrawRect(horizontalBlocks, horizontalBlockCount);
 
         SDL_RenderPresent(renderer);
         //SDL_Delay(100); // delay to limit the frame rate
     }
 
     cleanup:
+    // printf("horizontalBlockCount: %ld\n", horizontalBlockCount);
+    // for(int i = 0; i < horizontalBlockCount; i ++){
+    //     SDL_Rect cur = horizontalBlocks[i];
+    //     printf("x: %d, y: %d, w: %d, h: %d\n", cur.x, cur.y, cur.w, cur.h);
+    // }
+    printf("horizontalLineCount: %ld\n", horizontalLineCount);
+    for(int i = 0; i < horizontalLineCount; i ++){
+        SDL_Rect cur = horizontalLines[i];
+        printf("x: %d, y: %d, w: %d, h: %d\n", cur.x, cur.y, cur.w, cur.h);
+    }
     free(horizontalLines);
+    free(horizontalBlocks);
     MatDestroy(grayScale);
     // clean sample
     if (sample10 != NULL){
@@ -114,7 +128,7 @@ int main(){
     DestroyNetwork(network);
     DestroySDL();
 
-    printf("matCount : %ld\n", matCount);
+    //printf("matCount : %ld\n", matCount);
 
     printf("return code: %d\n", errorCode);
     return errorCode;

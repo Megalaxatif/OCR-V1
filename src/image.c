@@ -7,16 +7,16 @@
 #include <SDL2/SDL_surface.h>
 #include <stdalign.h>
 
-int DrawHorizontalLines(SDL_Rect* horizontalLines, size_t lineCount){
-    if (horizontalLines == NULL || lineCount < 2){
-        printf("Error: DrawHorizontalLines, invalid argument\n");
+int DrawRect(SDL_Rect* rects, size_t rectCount){
+    if (rects == NULL || rectCount <= 0){
+        printf("Error: DrawRect, invalid argument\n");
         return 1;
     }
     SDL_SetRenderTarget(renderer, NULL);
     int colorOffset = 255;
-    for(int i = 0; i < lineCount; i++ ){
-        SDL_SetRenderDrawColor(renderer, colorOffset, 0,0, 128);
-        SDL_RenderDrawRect(renderer, horizontalLines+i);
+    for(int i = 0; i < rectCount; i++ ){
+        SDL_SetRenderDrawColor(renderer, colorOffset, 0,0, 255);
+        SDL_RenderDrawRect(renderer, rects+i);
         //colorOffset = colorOffset - 20;
         //if (colorOffset <100) colorOffset = 255;
     }
@@ -54,7 +54,7 @@ SDL_Rect* ScanHorizontalLines(struct Mat* grayScale, size_t* lineCount_){
                         i++;
                     }
                     if (!isHole) { // end of the line
-                        if (currentLine.w > grayScale->col/4){ // ignore little lines
+                        //if (currentLine.w > grayScale->col/4){ // ignore little lines
                             // TODO: remove that and use a point buffer instead (use one similar to minimake)
                             lines[lineCount] = currentLine;
                             lineCount++;
@@ -63,7 +63,7 @@ SDL_Rect* ScanHorizontalLines(struct Mat* grayScale, size_t* lineCount_){
                                 free(lines);
                                 return NULL;
                             }
-                        }
+                       // }
                         inLine = 0;
                         currentLine.w = 0;
                     }
@@ -82,30 +82,77 @@ SDL_Rect* ScanHorizontalLines(struct Mat* grayScale, size_t* lineCount_){
     return lines;
 }
 
-// SDL_Rect* ConvertHorizontalLinesToRect(SDL_Point* points, size_t pointCount, size_t* rectCount_){ // convert adjacent horizontal lines into a rectangle
-//     if (points == NULL || rectCount_ == NULL || pointCount < 0||pointCount %2 != 0){
-//         printf("Error: ConvertHorizontalLinesToRect, invalid argument");
-//         return NULL;
-//     }
-//     SDL_Rect* rectList = malloc(200*sizeof(struct SDL_Rect)); // TODO: change this constant to use buffer just like in ScanHorizontalLines
-//     int rectCount = 0;
-//     int lastPoint = points[0].y;
-//     int lineCount = 1; // count the number of lines to merge into the rectangle
-//     for (size_t i = 1; i < pointCount/2; i++){
-//         SDL_Point currentPoint = points[i*2];
-//         if (currentPoint.y == lastY+1 && ){
-//             lineCount++;
-//         }
-//         else{
-//             if (lineCount != 0){
-//                 rectList[rectCount] = (SDL_Rect){};
-//                 lineCount = 0;
-//             }
-//         }
-//         lastY = points[i].y;
-//     }
-//     return rectList;
-// }
+SDL_Rect* ConvertHorizontalLinesToBlocks(SDL_Rect* lines, size_t lineCount, size_t* blockCount_){ // convert adjacent horizontal lines into a rectangle
+    if (lines == NULL || blockCount_ == NULL|| lineCount <= 0 || lineCount %2 != 0){
+        printf("Error: ConvertHorizontalLinesToBlocks, invalid argument");
+        return NULL;
+    }
+    SDL_Rect* blockList = malloc(200*sizeof(SDL_Rect)); // TODO: change this constant to use buffer just like in ScanHorizontalLines
+    size_t blockCount = 0;
+    size_t lineConvertedCount = 0;
+    int blockMinX = 0;
+    int blockMaxW = 0;
+    int blockY = 0;
+    int blockHeight = 0;
+    SDL_Rect prevLine = lines[0];
+    SDL_Rect adjacentLine = (SDL_Rect){.x = 0, .y = 0, .w = 0, .h = 0};
+    size_t i = 0;
+    while(lineConvertedCount != lineCount){
+        if (blockHeight == 0){ // we are creating a new block
+            adjacentLine = lines[i];
+            if (adjacentLine.x == adjacentLine.y == adjacentLine.w == adjacentLine.h == 0){
+                i++;
+                continue; // ignore the lines already converted
+            }
+            blockY = adjacentLine.y;
+            blockMinX = adjacentLine.x;
+            blockMaxW = adjacentLine.w;
+            lines[i] = (SDL_Rect){.x = 0, .y = 0, .w = 0, .h = 0}; // remove it from the list to avoid repetition
+            lineConvertedCount++;
+            blockHeight ++;
+        }
+        else{
+            int delta = 0.05*prevLine.w;
+            int adjacentLineFound = 0;
+            int j = i+1; // all the lines before i are above so no need to check them
+            while(!adjacentLineFound && j < lineCount){
+                adjacentLine = lines[j];
+                if (adjacentLine.x == adjacentLine.y == adjacentLine.w == adjacentLine.h == 0) {
+                    j++;
+                    continue; // ignore the lines already converted
+                }
+                if (adjacentLine.y == prevLine.y + 1 &&
+                    abs(adjacentLine.x - prevLine.x) < delta &&
+                    abs(adjacentLine.w - prevLine.w) < delta)
+                {
+                    if (adjacentLine.x < blockMinX)
+                        blockMinX = adjacentLine.x;
+                    if (adjacentLine.w > blockMaxW)
+                        blockMaxW = adjacentLine.w;
+
+                    adjacentLineFound = 1;
+                    lines[j] = (SDL_Rect){.x = 0, .y = 0, .w = 0, .h = 0}; // remove it from the list to avoid repetition
+                    lineConvertedCount++;
+                    blockHeight++;
+                }
+                j++;
+            }
+
+            if (!adjacentLineFound){
+                blockList[blockCount] = (SDL_Rect){.x = blockMinX, .y = blockY, .w = blockMaxW, .h = blockHeight};
+                blockCount++;
+                i++;
+                blockMinX = 0;
+                blockMaxW = 0;
+                blockHeight = 0;
+            }
+        }
+        prevLine = adjacentLine;
+    }
+    *blockCount_ = blockCount;
+    return blockList;
+}
+
 
 struct Mat* GetGridGrayScaleMatrix(char* imgFileName){ // loads the given image and returns a matrix of its grayscale
     if (imgFileName == NULL){

@@ -53,6 +53,8 @@ int InitSDL(){
         return -1;
     }
 
+    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND); // activate alpha
+
     // log
     SDL_RendererInfo info;
     SDL_GetRendererInfo(renderer, &info);
