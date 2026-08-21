@@ -43,11 +43,11 @@ int main(){
         goto cleanup;
     }
 
-    struct Mat* grayScale = GetGridGrayScaleMatrix("/home/megalaxatif/Documents/code/OCR/test3.png");
+    struct Mat* grayScale = GetGridGrayScaleMatrix("/home/megalaxatif/Documents/code/OCR/sudoku.jpg");
     size_t horizontalLineCount = 0;
     SDL_Rect* horizontalLines = ScanHorizontalLines(grayScale, &horizontalLineCount);
     size_t horizontalBlockCount = 0;
-    SDL_Rect* horizontalBlocks = ConvertHorizontalLinesToBlocks(horizontalLines, horizontalLineCount, &horizontalBlockCount);
+    SDL_Rect* horizontalBlocks = ConvertHorizontalLinesToBlocks(horizontalLines, horizontalLineCount, &horizontalBlockCount); // this function destroys horizontalLines
 
     SDL_Event event;
     int running = 1;
@@ -63,32 +63,21 @@ int main(){
             goto cleanup;
         }
         // train with the sample
-        Train(network, sample10, 10, answer10);
+        //Train(network, sample10, 10, answer10);
 
         SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
         SDL_SetRenderTarget(renderer, NULL);
         SDL_RenderClear(renderer);
 
-        // render
+        //render
         DrawGrayScale(grayScale);
-        DrawRect(horizontalLines, horizontalLineCount);
-        //DrawRect(horizontalBlocks, horizontalBlockCount);
-
+        DrawRect(horizontalBlocks, horizontalBlockCount);
+        //DrawRect(horizontalLines, horizontalLineCount);
         SDL_RenderPresent(renderer);
-        //SDL_Delay(100); // delay to limit the frame rate
     }
 
     cleanup:
-    // printf("horizontalBlockCount: %ld\n", horizontalBlockCount);
-    // for(int i = 0; i < horizontalBlockCount; i ++){
-    //     SDL_Rect cur = horizontalBlocks[i];
-    //     printf("x: %d, y: %d, w: %d, h: %d\n", cur.x, cur.y, cur.w, cur.h);
-    // }
-    printf("horizontalLineCount: %ld\n", horizontalLineCount);
-    for(int i = 0; i < horizontalLineCount; i ++){
-        SDL_Rect cur = horizontalLines[i];
-        printf("x: %d, y: %d, w: %d, h: %d\n", cur.x, cur.y, cur.w, cur.h);
-    }
+
     free(horizontalLines);
     free(horizontalBlocks);
     MatDestroy(grayScale);
@@ -129,7 +118,6 @@ int main(){
     DestroySDL();
 
     //printf("matCount : %ld\n", matCount);
-
     printf("return code: %d\n", errorCode);
     return errorCode;
 }

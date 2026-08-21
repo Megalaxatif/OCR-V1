@@ -55,7 +55,7 @@ int InitSDL(){
 
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND); // activate alpha
 
-    // log
+    //log
     SDL_RendererInfo info;
     SDL_GetRendererInfo(renderer, &info);
     printf("Renderer name: %s\n", info.name);
@@ -71,8 +71,9 @@ int InitSDL(){
 // }
 
 void DestroySDL(){
+    TTF_Quit();
+    IMG_Quit();
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
-    IMG_Quit();
     SDL_Quit();
 }

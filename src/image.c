@@ -33,8 +33,11 @@ SDL_Rect* ScanHorizontalLines(struct Mat* grayScale, size_t* lineCount_){
     SDL_Rect* lines = malloc(lineArraySize* sizeof(SDL_Rect));
 
     size_t lineCount = 0;
+    SDL_Rect currentLine = {.x = 0, .y = 0, .w = 0, .h = 1}; // first point of the line
     for(size_t y = 0; y < grayScale->row; y++){
-        SDL_Rect currentLine = {.x = 0, .y = y, .w = 0, .h = 0}; // first point of the line
+        currentLine.x = 0;
+        currentLine.y = y;
+        currentLine.w = 0;
         int inLine = 0; // boolean
         for(size_t x = 0; x < grayScale->col; x++){
             int grayCode = grayScale->data[y][x];
@@ -44,7 +47,7 @@ SDL_Rect* ScanHorizontalLines(struct Mat* grayScale, size_t* lineCount_){
                 else {
                     int isHole = 0;
                     int i = 1;
-                    while(x+i < grayScale->col && i < grayScale->col/30){
+                    while(x+i < grayScale->col && i < grayScale->col/100){  // NOTE: adjust this value if necessary
                         if (grayScale->data[y][x+i] == 0){
                             x += i;
                             currentLine.w += i;
@@ -54,24 +57,24 @@ SDL_Rect* ScanHorizontalLines(struct Mat* grayScale, size_t* lineCount_){
                         i++;
                     }
                     if (!isHole) { // end of the line
-                        //if (currentLine.w > grayScale->col/4){ // ignore little lines
+                        if (currentLine.w > grayScale->col/5){ // ignore little lines
                             // TODO: remove that and use a point buffer instead (use one similar to minimake)
                             lines[lineCount] = currentLine;
                             lineCount++;
                             if (lineCount >= lineArraySize){
                                 printf("Error: ScanHorizontalLines, the line array is full\n");
                                 free(lines);
+                                *lineCount_ = 0;
                                 return NULL;
                             }
-                       // }
+                        }
                         inLine = 0;
-                        currentLine.w = 0;
                     }
                 }
             }
             else {
                 if (grayCode == 0){ // we are going inside a potential line
-                    currentLine.w++;
+                    currentLine.w = 1;
                     currentLine.x = x;
                     inLine = 1;
                 }
@@ -83,8 +86,8 @@ SDL_Rect* ScanHorizontalLines(struct Mat* grayScale, size_t* lineCount_){
 }
 
 SDL_Rect* ConvertHorizontalLinesToBlocks(SDL_Rect* lines, size_t lineCount, size_t* blockCount_){ // convert adjacent horizontal lines into a rectangle
-    if (lines == NULL || blockCount_ == NULL|| lineCount <= 0 || lineCount %2 != 0){
-        printf("Error: ConvertHorizontalLinesToBlocks, invalid argument");
+    if (lines == NULL || blockCount_ == NULL|| lineCount <= 0){
+        printf("Error: ConvertHorizontalLinesToBlocks, invalid argument\n");
         return NULL;
     }
     SDL_Rect* blockList = malloc(200*sizeof(SDL_Rect)); // TODO: change this constant to use buffer just like in ScanHorizontalLines
@@ -100,7 +103,7 @@ SDL_Rect* ConvertHorizontalLinesToBlocks(SDL_Rect* lines, size_t lineCount, size
     while(lineConvertedCount != lineCount){
         if (blockHeight == 0){ // we are creating a new block
             adjacentLine = lines[i];
-            if (adjacentLine.x == adjacentLine.y == adjacentLine.w == adjacentLine.h == 0){
+            if (adjacentLine.x == 0 && adjacentLine.y == 0 && adjacentLine.w == 0 && adjacentLine.h == 0){
                 i++;
                 continue; // ignore the lines already converted
             }
@@ -117,7 +120,7 @@ SDL_Rect* ConvertHorizontalLinesToBlocks(SDL_Rect* lines, size_t lineCount, size
             int j = i+1; // all the lines before i are above so no need to check them
             while(!adjacentLineFound && j < lineCount){
                 adjacentLine = lines[j];
-                if (adjacentLine.x == adjacentLine.y == adjacentLine.w == adjacentLine.h == 0) {
+                if (adjacentLine.x == 0 && adjacentLine.y == 0 && adjacentLine.w == 0 && adjacentLine.h == 0) {
                     j++;
                     continue; // ignore the lines already converted
                 }
@@ -149,6 +152,12 @@ SDL_Rect* ConvertHorizontalLinesToBlocks(SDL_Rect* lines, size_t lineCount, size
         }
         prevLine = adjacentLine;
     }
+    // add the last block
+    if (blockHeight != 0){
+        blockList[blockCount] = (SDL_Rect){.x = blockMinX, .y = blockY, .w = blockMaxW, .h = blockHeight};
+        blockCount++;
+    }
+
     *blockCount_ = blockCount;
     return blockList;
 }
