@@ -49,6 +49,11 @@ int main(){
     size_t horizontalBlockCount = 0;
     SDL_Rect* horizontalBlocks = ConvertHorizontalLinesToBlocks(horizontalLines, horizontalLineCount, &horizontalBlockCount); // this function destroys horizontalLines
 
+    size_t verticalLineCount = 0;
+    SDL_Rect* verticalLines = ScanVerticalLines(grayScale, &verticalLineCount);
+    size_t verticalBlockCount = 0;
+    SDL_Rect* verticalBlocks = ConvertVerticalLinesToBlocks(verticalLines, verticalLineCount, &verticalBlockCount); // this function destroys verticalLines
+
     SDL_Event event;
     int running = 1;
     while (running){
@@ -72,7 +77,9 @@ int main(){
         //render
         DrawGrayScale(grayScale);
         DrawRect(horizontalBlocks, horizontalBlockCount);
+        //DrawRect(verticalLines, verticalLineCount);
         //DrawRect(horizontalLines, horizontalLineCount);
+        DrawRect(verticalBlocks, verticalBlockCount);
         SDL_RenderPresent(renderer);
     }
 
@@ -80,6 +87,9 @@ int main(){
 
     free(horizontalLines);
     free(horizontalBlocks);
+    free(verticalLines);
+    free(verticalBlocks);
+
     MatDestroy(grayScale);
     // clean sample
     if (sample10 != NULL){

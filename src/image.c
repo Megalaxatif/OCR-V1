@@ -23,6 +23,149 @@ int DrawRect(SDL_Rect* rects, size_t rectCount){
     return 0;
 }
 
+// VERTICAL----------------------------------
+
+SDL_Rect* ScanVerticalLines(struct Mat* grayScale, size_t* lineCount_){
+    if (grayScale == NULL){
+        printf("Error: ScanVerticalLines, grayScale is NULL\n");
+        return NULL;
+    }
+    // TODO: remove that and use a point buffer instead (use one similar to minimake)
+    const int lineArraySize = 2000;
+    SDL_Rect* lines = malloc(lineArraySize* sizeof(SDL_Rect));
+
+    size_t lineCount = 0;
+    SDL_Rect currentLine = {.x = 0, .y = 0, .w = 0, .h = 1}; // first point of the line
+    for(size_t x = 0; x < grayScale->col; x++){
+        currentLine.x = x;
+        currentLine.y = 0;
+        currentLine.w = 0;
+        int inLine = 0; // boolean
+        for(size_t y = 0; y < grayScale->row; y++){
+            int grayCode = grayScale->data[y][x];
+            if (inLine){
+                if (grayCode == 0)
+                    currentLine.h++;
+                else {
+                    int isHole = 0;
+                    int i = 1;
+                    while(y+i < grayScale->row && i < grayScale->row/100){  // NOTE: adjust this value if necessary
+                        if (grayScale->data[y+i][x] == 0){
+                            y += i;
+                            currentLine.h += i;
+                            isHole = 1;
+                            break;
+                        }
+                        i++;
+                    }
+                    if (!isHole) { // end of the line
+                        if (currentLine.h > grayScale->row/5){ // ignore little lines
+                            // TODO: remove that and use a point buffer instead (use one similar to minimake)
+                            lines[lineCount] = currentLine;
+                            lineCount++;
+                            if (lineCount >= lineArraySize){
+                                printf("Error: ScanVerticalLines, the line array is full\n");
+                                free(lines);
+                                *lineCount_ = 0;
+                                return NULL;
+                            }
+                        }
+                        inLine = 0;
+                    }
+                }
+            }
+            else {
+                if (grayCode == 0){ // we are going inside a potential line
+                    currentLine.h = 1;
+                    currentLine.y = y;
+                    inLine = 1;
+                }
+            }
+        }
+    }
+    *lineCount_ = lineCount;
+    return lines;
+}
+
+SDL_Rect* ConvertVerticalLinesToBlocks(SDL_Rect* lines, size_t lineCount, size_t* blockCount_){ // convert adjacent vertical lines into a rectangle
+    if (lines == NULL || blockCount_ == NULL|| lineCount <= 0){
+        printf("Error: ConvertVerticalLinesToBlocks, invalid argument\n");
+        return NULL;
+    }
+    SDL_Rect* blockList = malloc(200*sizeof(SDL_Rect)); // TODO: change this constant to use buffer just like in ScanVerticalLines
+    size_t blockCount = 0;
+    size_t lineConvertedCount = 0;
+    int blockMinY = 0;
+    int blockMaxH = 0;
+    int blockX = 0;
+    int blockWidth = 0;
+    SDL_Rect prevLine = lines[0];
+    SDL_Rect adjacentLine = (SDL_Rect){.x = 0, .y = 0, .w = 0, .h = 0};
+    size_t i = 0;
+    while(lineConvertedCount != lineCount){
+        if (blockWidth == 0){ // we are creating a new block
+            adjacentLine = lines[i];
+            if (adjacentLine.x == 0 && adjacentLine.y == 0 && adjacentLine.w == 0 && adjacentLine.h == 0){
+                i++;
+                continue; // ignore the lines already converted
+            }
+            blockX = adjacentLine.x;
+            blockMinY = adjacentLine.y;
+            blockMaxH = adjacentLine.h;
+            lines[i] = (SDL_Rect){.x = 0, .y = 0, .w = 0, .h = 0}; // remove it from the list to avoid repetition
+            lineConvertedCount++;
+            blockWidth ++;
+        }
+        else{
+            int delta = 0.05*prevLine.h;
+            int adjacentLineFound = 0;
+            int j = i+1; // all the lines before i are above so no need to check them
+            while(!adjacentLineFound && j < lineCount){
+                adjacentLine = lines[j];
+                if (adjacentLine.x == 0 && adjacentLine.y == 0 && adjacentLine.w == 0 && adjacentLine.h == 0) {
+                    j++;
+                    continue; // ignore the lines already converted
+                }
+                if (adjacentLine.x == prevLine.x + 1 &&
+                    abs(adjacentLine.y - prevLine.y) < delta &&
+                    abs(adjacentLine.h - prevLine.h) < delta)
+                {
+                    if (adjacentLine.y < blockMinY)
+                        blockMinY = adjacentLine.y;
+                    if (adjacentLine.h > blockMaxH)
+                        blockMaxH = adjacentLine.h;
+
+                    adjacentLineFound = 1;
+                    lines[j] = (SDL_Rect){.x = 0, .y = 0, .w = 0, .h = 0}; // remove it from the list to avoid repetition
+                    lineConvertedCount++;
+                    blockWidth++;
+                }
+                j++;
+            }
+
+            if (!adjacentLineFound){
+                blockList[blockCount] = (SDL_Rect){.x = blockX, .y = blockMinY, .w = blockWidth, .h = blockMaxH};
+                blockCount++;
+                i++;
+                blockMinY = 0;
+                blockMaxH = 0;
+                blockWidth = 0;
+            }
+        }
+        prevLine = adjacentLine;
+    }
+    // add the last block
+    if (blockWidth != 0){
+        blockList[blockCount] = (SDL_Rect){.x = blockX, .y = blockMinY, .w = blockWidth, .h = blockMaxH};
+        blockCount++;
+    }
+    printf("block count: %ld\n", blockCount);
+    *blockCount_ = blockCount;
+    return blockList;
+}
+
+// HORIZONTAL----------------------------------
+
 SDL_Rect* ScanHorizontalLines(struct Mat* grayScale, size_t* lineCount_){
     if (grayScale == NULL){
         printf("Error: ScanHorizontalLines, grayScale is NULL\n");
