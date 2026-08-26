@@ -3,12 +3,13 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
 #include <SDL2/SDL_pixels.h>
+#include <SDL2/SDL_rect.h>
 #include <SDL2/SDL_render.h>
 #include <SDL2/SDL_surface.h>
 #include <stdalign.h>
 
-int DrawRect(SDL_Rect* rects, size_t rectCount, size_t textureHeight, size_t textureWidth){
-    if (rects == NULL || rectCount <= 0){
+int DrawRects(SDL_Rect* rects, size_t rectCount, struct Mat* referenceMatrix, SDL_Color color){
+    if (rects == NULL || rectCount <= 0 || referenceMatrix == NULL){
         printf("Error: DrawRect, invalid argument\n");
         return 1;
     }
@@ -16,8 +17,8 @@ int DrawRect(SDL_Rect* rects, size_t rectCount, size_t textureHeight, size_t tex
         renderer,
         SDL_PIXELFORMAT_RGBA8888,
         SDL_TEXTUREACCESS_TARGET,
-        textureWidth,
-        textureHeight
+        referenceMatrix->col,
+        referenceMatrix->row
     );
     SDL_SetTextureBlendMode(texture, SDL_BLENDMODE_BLEND);
     SDL_SetRenderTarget(renderer, texture);
@@ -25,7 +26,7 @@ int DrawRect(SDL_Rect* rects, size_t rectCount, size_t textureHeight, size_t tex
     SDL_RenderClear(renderer);
 
     for(int i = 0; i < rectCount; i++ ){
-        SDL_SetRenderDrawColor(renderer, 255, 0,0, 255);
+        SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, color.a);
         SDL_RenderDrawRect(renderer, rects+i);
     }
 
@@ -389,8 +390,28 @@ int SortBlocks(SDL_Rect** horizontalBlocks, SDL_Rect** verticalBlocks, size_t* h
     return 0;
 }
 
-SDL_Point* GetDigitCoords(SDL_Rect* horizontalBlocks, SDL_Rect* verticalBlocks, size_t horizontalBlockCount, size_t verticalBlockCount){
+SDL_Rect** GetDigitRects(SDL_Rect* horizontalBlocks, SDL_Rect* verticalBlocks){
+    if (horizontalBlocks == NULL || verticalBlocks == NULL){
+        printf("Error: GetDigitRects, invalid argument\n");
+        return NULL;
+    }
+    // a sudoku has 81 digits
+    SDL_Rect** digitCoords = malloc(9*sizeof(SDL_Rect*));
+    for(int i = 0; i < 9; i++){
+        digitCoords[i] = malloc(9*sizeof(SDL_Rect));
+    }
 
+    for(size_t i = 0; i < 9; i++){
+        for(size_t j = 0; j < 9; j++){
+            SDL_Rect res = {0};
+            SDL_IntersectRect(horizontalBlocks + i, verticalBlocks + j, &res);
+            SDL_Rect res2 = {0}; // diagonal to res
+            SDL_IntersectRect(horizontalBlocks + i + 1, verticalBlocks + j + 1, &res2);
+
+            digitCoords[i][j] = (SDL_Rect){.x = res.x + res.w, .y = res.y + res.h, .h= res2.y - res.y-1, .w = res2.x - res.x-1};
+        }
+    }
+    return digitCoords;
 }
 
 struct Mat* GetGridGrayScaleMatrix(char* imgFileName){

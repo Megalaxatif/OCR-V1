@@ -56,8 +56,15 @@ int main(){
 
     int ret = SortBlocks(&horizontalBlocks, &verticalBlocks, &horizontalBlockCount, &verticalBlockCount);
     if (ret != 0){
-        printf("Error: SortBlocks, return value is different from 0\n");
+        printf("Error: main, SortBlocks returned %d\n", ret);
         errorCode = 4;
+        goto cleanup;
+    }
+
+    SDL_Rect** digitRects = GetDigitRects(horizontalBlocks, verticalBlocks); // always return a 9 by 9 array
+    if (digitRects == NULL){
+        printf("Error: main, GetDigitRects returned NULL\n");
+        errorCode = 5;
         goto cleanup;
     }
 
@@ -83,10 +90,13 @@ int main(){
 
         //render
         DrawGrayScale(grayScale);
-        DrawRect(horizontalBlocks, horizontalBlockCount, grayScale->row, grayScale->col);
+        DrawRects(horizontalBlocks, horizontalBlockCount, grayScale, (SDL_Color){255, 0, 0, 255});
         //DrawRect(verticalLines, verticalLineCount);
         //DrawRect(horizontalLines, horizontalLineCount);
-        DrawRect(verticalBlocks, verticalBlockCount, grayScale->row, grayScale->col);
+        DrawRects(verticalBlocks, verticalBlockCount, grayScale, (SDL_Color){255, 0, 0, 255});
+        for(int i = 0; i < 9; i++){
+            DrawRects(digitRects[i], 9, grayScale, (SDL_Color){225, 225, 0, 128});
+        }
         SDL_RenderPresent(renderer);
     }
 
@@ -96,6 +106,14 @@ int main(){
     free(horizontalBlocks);
     free(verticalLines);
     free(verticalBlocks);
+
+    // clean digitRects
+    if (digitRects != NULL){
+        for(int i = 0; i < 9; i++){
+            free(digitRects[i]);
+        }
+        free(digitRects);
+    }
 
     MatDestroy(grayScale);
     // clean sample
