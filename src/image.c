@@ -7,19 +7,58 @@
 #include <SDL2/SDL_surface.h>
 #include <stdalign.h>
 
-int DrawRect(SDL_Rect* rects, size_t rectCount){
+int DrawRect(SDL_Rect* rects, size_t rectCount, size_t textureHeight, size_t textureWidth){
     if (rects == NULL || rectCount <= 0){
         printf("Error: DrawRect, invalid argument\n");
         return 1;
     }
-    SDL_SetRenderTarget(renderer, NULL);
-    int colorOffset = 255;
+    SDL_Texture* texture = SDL_CreateTexture(
+        renderer,
+        SDL_PIXELFORMAT_RGBA8888,
+        SDL_TEXTUREACCESS_TARGET,
+        textureWidth,
+        textureHeight
+    );
+    SDL_SetTextureBlendMode(texture, SDL_BLENDMODE_BLEND);
+    SDL_SetRenderTarget(renderer, texture);
+    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
+    SDL_RenderClear(renderer);
+
     for(int i = 0; i < rectCount; i++ ){
-        SDL_SetRenderDrawColor(renderer, colorOffset, 0,0, 255);
+        SDL_SetRenderDrawColor(renderer, 255, 0,0, 255);
         SDL_RenderDrawRect(renderer, rects+i);
-        //colorOffset = colorOffset - 20;
-        //if (colorOffset <100) colorOffset = 255;
     }
+
+    SDL_SetRenderTarget(renderer, NULL);
+    SDL_RenderCopy(renderer, texture, NULL, NULL);
+    SDL_DestroyTexture(texture);
+    return 0;
+}
+
+int DrawGrayScale(struct Mat* grayScale){
+    if (grayScale == NULL) {
+        printf("Error: DisplayGrayScale, matrix pointer is NULL\n");
+        return 1;
+    }
+    SDL_Texture* texture = SDL_CreateTexture(
+        renderer,
+        SDL_PIXELFORMAT_RGBA8888,
+        SDL_TEXTUREACCESS_TARGET,
+        grayScale->col,
+        grayScale->row
+    );
+    SDL_SetRenderTarget(renderer, texture);
+
+    for(size_t y = 0; y < grayScale->row; y++){
+        for(size_t x = 0; x < grayScale->col; x++){
+            double grayCode = grayScale->data[y][x];
+            SDL_SetRenderDrawColor(renderer, grayCode*255, grayCode*255, grayCode*255, 255);
+            SDL_RenderDrawPoint(renderer, x, y);
+        }
+    }
+    SDL_SetRenderTarget(renderer, NULL);
+    SDL_RenderCopy(renderer, texture, NULL, NULL);
+    SDL_DestroyTexture(texture);
     return 0;
 }
 
@@ -59,7 +98,7 @@ SDL_Rect* ScanVerticalLines(struct Mat* grayScale, size_t* lineCount_){
                         i++;
                     }
                     if (!isHole) { // end of the line
-                        if (currentLine.h > grayScale->row/5){ // ignore little lines
+                        if (currentLine.h > grayScale->row/10){ // ignore little lines
                             // TODO: remove that and use a point buffer instead (use one similar to minimake)
                             lines[lineCount] = currentLine;
                             lineCount++;
@@ -200,7 +239,7 @@ SDL_Rect* ScanHorizontalLines(struct Mat* grayScale, size_t* lineCount_){
                         i++;
                     }
                     if (!isHole) { // end of the line
-                        if (currentLine.w > grayScale->col/5){ // ignore little lines
+                        if (currentLine.w > grayScale->col/10){ // ignore little lines
                             // TODO: remove that and use a point buffer instead (use one similar to minimake)
                             lines[lineCount] = currentLine;
                             lineCount++;
@@ -304,9 +343,57 @@ SDL_Rect* ConvertHorizontalLinesToBlocks(SDL_Rect* lines, size_t lineCount, size
     *blockCount_ = blockCount;
     return blockList;
 }
+// -----------------------------------
 
+int SortBlocks(SDL_Rect** horizontalBlocks, SDL_Rect** verticalBlocks, size_t* horizontalBlockCount, size_t* verticalBlockCount){
+    if (horizontalBlocks == NULL || *horizontalBlocks == NULL || *verticalBlocks == NULL || verticalBlocks == NULL || horizontalBlockCount == NULL || verticalBlockCount == NULL){
+        printf("Error: SortBlocks, invalid arguments\n");
+        return 1;
+    }
+    SDL_Rect* sortedHorizontalBlocks = malloc(10*sizeof(SDL_Rect));
+    SDL_Rect* sortedVerticalBlocks = malloc(10*sizeof(SDL_Rect));
+    int sortedHorizontalBlockCount = 0;
+    int verticalLinesFound = 0; // boolean
 
-struct Mat* GetGridGrayScaleMatrix(char* imgFileName){ // loads the given image and returns a matrix of its grayscale
+    for(size_t i = 0; i < *horizontalBlockCount; i++){
+        int verticalCollisionCount = 0;
+        for(size_t j = 0; j < *verticalBlockCount; j++){
+            if (SDL_HasIntersection(*horizontalBlocks + i, *verticalBlocks + j)){
+                if (!verticalLinesFound)
+                    sortedVerticalBlocks[verticalCollisionCount] = (*verticalBlocks)[j];
+
+                verticalCollisionCount++;
+                if (verticalCollisionCount >= 10)
+                    break;
+            }
+        }
+        if (verticalCollisionCount == 10){
+            verticalLinesFound = 1;
+            sortedHorizontalBlocks[sortedHorizontalBlockCount] = (*horizontalBlocks)[i];
+            sortedHorizontalBlockCount++;
+            if (sortedHorizontalBlockCount == 10) break; // found all lines
+        }
+    }
+    if (!verticalLinesFound || sortedHorizontalBlockCount != 10){
+        printf("Warning: SortBlock, no valid grid found\n");
+        free(sortedHorizontalBlocks);
+        free(sortedVerticalBlocks);
+        return 2;
+    }
+    free(*horizontalBlocks);
+    free(*verticalBlocks);
+    *horizontalBlocks = sortedHorizontalBlocks;
+    *verticalBlocks = sortedVerticalBlocks;
+    *horizontalBlockCount = 10;
+    *verticalBlockCount = 10;
+    return 0;
+}
+
+SDL_Point* GetDigitCoords(SDL_Rect* horizontalBlocks, SDL_Rect* verticalBlocks, size_t horizontalBlockCount, size_t verticalBlockCount){
+
+}
+
+struct Mat* GetGridGrayScaleMatrix(char* imgFileName){
     if (imgFileName == NULL){
         printf("Error: GetGridGrayScaleMatrix, imgFileName is NULL\n");
         return NULL;
@@ -399,21 +486,4 @@ struct Mat* GetTrainingGrayScaleMatrix(char imgFileName[]){
     }
     SDL_FreeSurface(surface);
     return grayScale;
-}
-
-int DrawGrayScale(struct Mat* grayScale){
-    if (grayScale == NULL) {
-        printf("Error: DisplayGrayScale, matrix pointer is NULL\n");
-        return 1;
-    }
-    SDL_SetRenderTarget(renderer, NULL);
-
-    for(size_t y = 0; y < grayScale->row; y++){
-        for(size_t x = 0; x < grayScale->col; x++){
-            double grayCode = grayScale->data[y][x];
-            SDL_SetRenderDrawColor(renderer, grayCode*255, grayCode*255, grayCode*255, 255);
-            SDL_RenderDrawPoint(renderer, x, y);
-        }
-    }
-    return 0;
 }

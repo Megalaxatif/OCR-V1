@@ -43,7 +43,7 @@ int main(){
         goto cleanup;
     }
 
-    struct Mat* grayScale = GetGridGrayScaleMatrix("/home/megalaxatif/Documents/code/OCR/sudoku.jpg");
+    struct Mat* grayScale = GetGridGrayScaleMatrix("/home/megalaxatif/Documents/code/OCR/sudoku3.png");
     size_t horizontalLineCount = 0;
     SDL_Rect* horizontalLines = ScanHorizontalLines(grayScale, &horizontalLineCount);
     size_t horizontalBlockCount = 0;
@@ -53,6 +53,13 @@ int main(){
     SDL_Rect* verticalLines = ScanVerticalLines(grayScale, &verticalLineCount);
     size_t verticalBlockCount = 0;
     SDL_Rect* verticalBlocks = ConvertVerticalLinesToBlocks(verticalLines, verticalLineCount, &verticalBlockCount); // this function destroys verticalLines
+
+    int ret = SortBlocks(&horizontalBlocks, &verticalBlocks, &horizontalBlockCount, &verticalBlockCount);
+    if (ret != 0){
+        printf("Error: SortBlocks, return value is different from 0\n");
+        errorCode = 4;
+        goto cleanup;
+    }
 
     SDL_Event event;
     int running = 1;
@@ -76,10 +83,10 @@ int main(){
 
         //render
         DrawGrayScale(grayScale);
-        DrawRect(horizontalBlocks, horizontalBlockCount);
+        DrawRect(horizontalBlocks, horizontalBlockCount, grayScale->row, grayScale->col);
         //DrawRect(verticalLines, verticalLineCount);
         //DrawRect(horizontalLines, horizontalLineCount);
-        DrawRect(verticalBlocks, verticalBlockCount);
+        DrawRect(verticalBlocks, verticalBlockCount, grayScale->row, grayScale->col);
         SDL_RenderPresent(renderer);
     }
 

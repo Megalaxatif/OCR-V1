@@ -8,8 +8,11 @@ SDL_Rect* ConvertHorizontalLinesToBlocks(SDL_Rect* lines, size_t lineCount, size
 SDL_Rect* ScanVerticalLines(struct Mat* grayScale, size_t* lineCount_);
 SDL_Rect* ConvertVerticalLinesToBlocks(SDL_Rect* lines, size_t lineCount, size_t* blockCount_);
 
-int DrawRect(SDL_Rect* rects, size_t rectCount);
-struct Mat* GetGridGrayScaleMatrix(char* imgFileName);
+int SortBlocks(SDL_Rect** horizontalBlocks, SDL_Rect** verticalBlocks, size_t* horizontalBlockCount, size_t* verticalBlockCount);
+SDL_Point* GetDigitCoords(SDL_Rect* horizontalBlocks, SDL_Rect* verticalBlocks, size_t horizontalBlockCount, size_t verticalBlockCount);
+
+int DrawRect(SDL_Rect* rects, size_t rectCount, size_t textureHeight, size_t textureWidth);
+struct Mat* GetGridGrayScaleMatrix(char* imgFileName);// loads the given image and returns a matrix of its grayscale
 // does the exact same as GetGrayScaleMatrix but stores the result in a column matrix so that it can be used for the network
 struct Mat* GetTrainingGrayScaleMatrix(char imgFileName[]);
 int DrawGrayScale(struct Mat* grayScale);
