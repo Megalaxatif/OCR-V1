@@ -1,6 +1,7 @@
 #include "header/neurons.h"
 #include "header/image.h"
 #include "header/math.h"
+#include <SDL2/SDL_image.h>
 
 double correctCounter = 0;
 double counter = 0;
@@ -84,7 +85,9 @@ int ComputeActivation(struct Layer* layer, struct Layer* nextLayer){ // calculat
     return 0;
 }
 
-int ForwardPass(struct Network* network){
+int ForwardPass(struct Network* network, struct Mat* input){
+    input = InvertForwardPassGrayScaleMatrix(input); // needed if we are using black on white training images
+    network->layers[0]->activation = input;
     int i = 0;
     while(i < network->layerCount - 1){
         int errorCode = ComputeActivation(network->layers[i], network->layers[i+1]);
@@ -96,6 +99,25 @@ int ForwardPass(struct Network* network){
     }
     return 0;
 }
+
+int GetGuessedDigit(struct Network* network){
+    if (network == NULL){
+        printf("Error: GetGuessedDigitIndex, invalid argument\n");
+        return -1;
+    }
+    struct Mat* lastLayerActivation = network->layers[network->layerCount - 1]->activation;
+    double biggest = lastLayerActivation->data[0][0];
+    int biggestIndex = 0;
+    for(int j = 1; j < lastLayerActivation->row; j++){
+        double n = lastLayerActivation->data[j][0];
+        if (n > biggest){
+            biggest = n;
+            biggestIndex = j;
+        }
+    }
+    return biggestIndex; // the guessed digit corresponds to this index
+}
+
 
 int Train(struct Network* network, char** sample, size_t sampleSize, struct Mat* answer[]){
     if (sampleSize < 1||network == NULL || sample == NULL || answer == NULL){
@@ -116,43 +138,44 @@ int Train(struct Network* network, char** sample, size_t sampleSize, struct Mat*
     network->layers[0]->activation = NULL;
 
     for(size_t k = 0; k < sampleSize; k++){
-        struct Mat* grayScale = GetTrainingGrayScaleMatrix(sample[k]);
+
+        SDL_Surface* trainingSurface = IMG_Load(sample[k]);
+
+        if (trainingSurface == NULL){
+            printf("Error: Training, impossible to load the image at %s\n", sample[k]);
+            errorCode = 4;
+            goto clear;
+        }
+
+        struct Mat* grayScale = GetForwardPassGrayScaleMatrix(trainingSurface);
+        SDL_FreeSurface(trainingSurface);
         if (grayScale == NULL){
-            printf("Error: Train, the grayScale matrix is NULL\n");
+            printf("Error: Train, GetForwardPassGrayScaleMatrix returned NULL\n");
             errorCode = 3;
             goto clear;
         }
-        // use the grayScale as the activation value of the input layer
-        network->layers[0]->activation = grayScale;
 
-        errorCode = ForwardPass(network);
+        errorCode = ForwardPass(network, grayScale);
         if (errorCode != 0){
             printf("Error: Train, ForwardPass returned %d\n", errorCode);
             goto clear;
         }
 
-        int i = network->layerCount - 1;
-
-        struct Mat* lastLayerActivation = network->layers[i]->activation;
-        double biggest = lastLayerActivation->data[0][0];
-        int biggestIndex = 0;
-        for(int j = 1; j < lastLayerActivation->row; j++){
-            double n = lastLayerActivation->data[j][0];
-            if (n > biggest){
-                biggest = n;
-                biggestIndex = j;
-            }
-        }
+        int guessedDigit = GetGuessedDigit(network);
 
         counter++;
-        if (biggestIndex == k)
+        if (guessedDigit == k){
             correctCounter++;
+            printf("hit  | ");
+        }
+        else printf("miss | ");
         printf("SCORE: %f\n", correctCounter/counter);
 
         // BACKPROBAGATION----------------
         // error  of the last layer
         // this block perform the calculation (A^n - Y)
         // From what I calculated it should be (A^n - Y) ⊙ f'(Z^n) but we use softmax for the last layer so some magic happens and we remove the last term
+        int i = network->layerCount - 1;
         struct Mat* delta = MatSub(network->layers[i]->activation, answer[k]);
 
         while(i > 0){
@@ -214,7 +237,6 @@ int Train(struct Network* network, char** sample, size_t sampleSize, struct Mat*
     free(biasesGradiants);
     return errorCode;
 }
-
 
 struct Mat** GetAnswer10(){
     struct Mat** answer10 = malloc(10*sizeof(struct Mat*));

@@ -1,4 +1,4 @@
-train/
+database/*
 *.out
 *.exe
 build/

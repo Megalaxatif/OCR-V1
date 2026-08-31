@@ -3,6 +3,7 @@
 #include "header/math.h"
 #include "header/init.h"
 #include "header/neurons.h"
+#include <SDL2/SDL_render.h>
 #include <string.h>
 #include <stdlib.h>
 #include <time.h>
@@ -10,10 +11,11 @@
 
 int errorCode = 0;
 size_t* fileCount = NULL; // fileCount[i] correspond to the number of elements in files[i]
-int neuronsPerLayer[] = {NETWORK_IMG_SIZE*NETWORK_IMG_SIZE, 10, 10};
+int neuronsPerLayer[] = {NETWORK_IMG_SIZE*NETWORK_IMG_SIZE, 256, 128, 10};
 struct Network* network = NULL;
 struct Mat** answer10 = NULL;
 char*** files = NULL;
+int** digits = NULL;
 
 int main(){
     srand(time(NULL)); // initialise the seed
@@ -24,7 +26,7 @@ int main(){
         sample10[i] = malloc(100 * sizeof(char));
     }
 
-    network = CreateNetwork(0.02, 3, neuronsPerLayer, NULL, NULL);
+    network = CreateNetwork(0.02, 4, neuronsPerLayer, NULL, NULL);
     if (network == NULL){
         printf("Error: main, network is NULL\n");
         errorCode = 1;
@@ -42,8 +44,8 @@ int main(){
         errorCode = 3;
         goto cleanup;
     }
-
-    struct Mat* grayScale = GetGridGrayScaleMatrix("/home/megalaxatif/Documents/code/OCR/sudoku3.png");
+    char* sudokuPath = "/home/megalaxatif/Documents/code/OCR/sudoku2.png";
+    struct Mat* grayScale = GetGridGrayScaleMatrix(sudokuPath);
     size_t horizontalLineCount = 0;
     SDL_Rect* horizontalLines = ScanHorizontalLines(grayScale, &horizontalLineCount);
     size_t horizontalBlockCount = 0;
@@ -61,7 +63,7 @@ int main(){
         goto cleanup;
     }
 
-    SDL_Rect** digitRects = GetDigitRects(horizontalBlocks, verticalBlocks); // always return a 9 by 9 array
+    SDL_Rect** digitRects = GetSudokuDigitRects(horizontalBlocks, verticalBlocks); // always return a 9 by 9 array
     if (digitRects == NULL){
         printf("Error: main, GetDigitRects returned NULL\n");
         errorCode = 5;
@@ -69,43 +71,67 @@ int main(){
     }
 
     SDL_Event event;
-    int running = 1;
+    int running = 1; // bool
+    int trainingCycle = 0;
+
+    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+    SDL_SetRenderTarget(renderer, NULL);
+    SDL_RenderClear(renderer);
+
+    //render
+    DrawGrayScale(grayScale);
+    DrawFilledRects(horizontalBlocks, horizontalBlockCount, grayScale, (SDL_Color){255, 0, 0, 255});
+    //DrawRect(verticalLines, verticalLineCount);
+    //DrawRect(horizontalLines, horizontalLineCount);
+    DrawFilledRects(verticalBlocks, verticalBlockCount, grayScale, (SDL_Color){255, 0, 0, 255});
+    for(int i = 0; i < 9; i++){
+        DrawRects(digitRects[i], 9, grayScale, (SDL_Color){0, 225, 0, 255});
+    }
+    SDL_RenderPresent(renderer);
+
     while (running){
         while (SDL_PollEvent(&event)){
             if (event.type == SDL_QUIT)
                 running = 0;
         }
-
         errorCode = GetSample10(&sample10, files, fileCount);
         if (errorCode != 0){
             printf("Error: main, GetSample10 returned %d\n", errorCode);
             goto cleanup;
         }
         // train with the sample
-        //Train(network, sample10, 10, answer10);
-
-        SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
-        SDL_SetRenderTarget(renderer, NULL);
-        SDL_RenderClear(renderer);
-
-        //render
-        DrawGrayScale(grayScale);
-        DrawRects(horizontalBlocks, horizontalBlockCount, grayScale, (SDL_Color){255, 0, 0, 255});
-        //DrawRect(verticalLines, verticalLineCount);
-        //DrawRect(horizontalLines, horizontalLineCount);
-        DrawRects(verticalBlocks, verticalBlockCount, grayScale, (SDL_Color){255, 0, 0, 255});
-        for(int i = 0; i < 9; i++){
-            DrawRects(digitRects[i], 9, grayScale, (SDL_Color){225, 225, 0, 128});
-        }
-        SDL_RenderPresent(renderer);
+        Train(network, sample10, 10, answer10);
+        trainingCycle++;
+        if (trainingCycle == 150)
+            running = 0;
     }
 
+    digits = GetSudokuDigits(digitRects, sudokuPath, network);
+    if (digits == NULL){
+        printf("Error: main, GetSudokuDigits returned NULL\n");
+        errorCode = 6;
+        goto cleanup;
+    }
+    //print the array
+    printf("\n");
+    for(int i = 0; i < 9; i++){
+        for(int j = 0; j < 9; j++){
+            printf("%d ", digits[i][j]);
+        }
+        printf("\n");
+    }
+    while(1){
+        while (SDL_PollEvent(&event)){
+            if (event.type == SDL_QUIT)
+                break;
+        }
+    }
     cleanup:
-
     free(horizontalLines);
     free(horizontalBlocks);
     free(verticalLines);
     free(verticalBlocks);
+    MatDestroy(grayScale);
 
     // clean digitRects
     if (digitRects != NULL){
@@ -115,7 +141,14 @@ int main(){
         free(digitRects);
     }
 
-    MatDestroy(grayScale);
+    // clean digits
+    if (digits != NULL){
+        for(int i = 0; i < 9; i++){
+            free(digits[i]);
+        }
+        free(digits);
+    }
+
     // clean sample
     if (sample10 != NULL){
         for(int i = 0; i < 10; i++){
