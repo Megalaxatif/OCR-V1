@@ -16,8 +16,8 @@ int SortBlocks(SDL_Rect** horizontalBlocks, SDL_Rect** verticalBlocks, size_t* h
 // return a two dimentional array of the rectangles of each digit in the grid.
 // IMPORTANT: this function supposes that horizontalBlocks and verticalBlocks represent a valid sudoku grid
 SDL_Rect** GetSudokuDigitRects(SDL_Rect* horizontalBlocks, SDL_Rect* verticalBlocks);
-int** GetSudokuDigits(SDL_Rect** digitRects, char* sudokuFilePath, struct Network* network);
-
+SDL_Texture** GetSudokuDigitTextures(SDL_Rect** digitRects, char* sudokuFilePath, struct Network* network);
+int* SolveDigitTextures(SDL_Texture** textures, size_t textureCount);
 int DrawRects(SDL_Rect* rects, size_t rectCount, struct Mat* referenceMatrix, SDL_Color color); // draw the list of rectangles with the given color on the screen, referenceMatrix is needed to resize the rectangles correctly
 int DrawFilledRects(SDL_Rect* rects, size_t rectCount, struct Mat* referenceMatrix, SDL_Color color);
 struct Mat* GetGridGrayScaleMatrix(char* imgFileName);// loads the given image and returns a matrix of its grayscale
