@@ -15,7 +15,10 @@ int neuronsPerLayer[] = {NETWORK_IMG_SIZE*NETWORK_IMG_SIZE, 256, 128, 10};
 struct Network* network = NULL;
 struct Mat** answer10 = NULL;
 char*** files = NULL;
-int** digits = NULL;
+int* digits = NULL;
+struct Mat** digitGrayScales = NULL;
+struct SDL_Rect** digitRects = NULL;
+SDL_Texture** digitTextures = NULL;
 
 int main(){
     srand(time(NULL)); // initialise the seed
@@ -45,14 +48,14 @@ int main(){
         goto cleanup;
     }
     char* sudokuPath = "/home/megalaxatif/Documents/code/OCR/sudoku2.png";
-    struct Mat* grayScale = GetGridGrayScaleMatrix(sudokuPath);
+    struct Mat* gridGrayScale = GetGridGrayScaleMatrix(sudokuPath);
     size_t horizontalLineCount = 0;
-    SDL_Rect* horizontalLines = ScanHorizontalLines(grayScale, &horizontalLineCount);
+    SDL_Rect* horizontalLines = ScanHorizontalLines(gridGrayScale, &horizontalLineCount);
     size_t horizontalBlockCount = 0;
     SDL_Rect* horizontalBlocks = ConvertHorizontalLinesToBlocks(horizontalLines, horizontalLineCount, &horizontalBlockCount); // this function destroys horizontalLines
 
     size_t verticalLineCount = 0;
-    SDL_Rect* verticalLines = ScanVerticalLines(grayScale, &verticalLineCount);
+    SDL_Rect* verticalLines = ScanVerticalLines(gridGrayScale, &verticalLineCount);
     size_t verticalBlockCount = 0;
     SDL_Rect* verticalBlocks = ConvertVerticalLinesToBlocks(verticalLines, verticalLineCount, &verticalBlockCount); // this function destroys verticalLines
 
@@ -63,10 +66,25 @@ int main(){
         goto cleanup;
     }
 
-    SDL_Rect** digitRects = GetSudokuDigitRects(horizontalBlocks, verticalBlocks); // always return a 9 by 9 array
+    digitRects = GetSudokuDigitRects(horizontalBlocks, verticalBlocks); // always return a 9 by 9 array
     if (digitRects == NULL){
-        printf("Error: main, GetDigitRects returned NULL\n");
+        printf("Error: main, GetSudokuDigitRects returned NULL\n");
         errorCode = 5;
+        goto cleanup;
+    }
+
+    digitTextures = GetSudokuDigitTextures(digitRects, sudokuPath);
+    if (digitTextures == NULL){
+        printf("Error: main, GetSudokuDigitTextures returned NULL\n");
+        errorCode = 6;
+        goto cleanup;
+    }
+
+    digitGrayScales = ConvertTexturesToGrayScale(digitTextures, 81);
+
+    if (digitGrayScales == NULL){
+        printf("Error: main, ConvertTexturesToGrayScale returned NULL\n");
+        errorCode = 6;
         goto cleanup;
     }
 
@@ -74,18 +92,24 @@ int main(){
     int running = 1; // bool
     int trainingCycle = 0;
 
-    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+    SDL_SetRenderDrawColor(renderer, 0,0,0,0);
     SDL_SetRenderTarget(renderer, NULL);
     SDL_RenderClear(renderer);
 
     //render
-    DrawGrayScale(grayScale);
-    DrawFilledRects(horizontalBlocks, horizontalBlockCount, grayScale, (SDL_Color){255, 0, 0, 255});
-    //DrawRect(verticalLines, verticalLineCount);
-    //DrawRect(horizontalLines, horizontalLineCount);
-    DrawFilledRects(verticalBlocks, verticalBlockCount, grayScale, (SDL_Color){255, 0, 0, 255});
-    for(int i = 0; i < 9; i++){
-        DrawRects(digitRects[i], 9, grayScale, (SDL_Color){0, 225, 0, 255});
+    // DrawGrayScale(gridGrayScale);
+    // DrawFilledRects(horizontalBlocks, horizontalBlockCount, gridGrayScale, (SDL_Color){255, 0, 0, 255});
+    // //DrawRects(verticalLines, verticalLineCount);
+    // //DrawRects(horizontalLines, horizontalLineCount);
+    // DrawFilledRects(verticalBlocks, verticalBlockCount, gridGrayScale, (SDL_Color){255, 0, 0, 255});
+    // for(int i = 0; i < 9; i++){
+    //     DrawRects(digitRects[i], 9, gridGrayScale, (SDL_Color){0, 225, 0, 255});
+    // }
+    // DrawDigitGrayScales(digitGrayScales, digitRects);
+    for(int k = 0; k < 9; k++){
+        for(int l = 0; l < 9; l++){
+            SDL_RenderCopy(renderer, digitTextures[k*9+l], NULL, digitRects[k] + l);
+        }
     }
     SDL_RenderPresent(renderer);
 
@@ -106,9 +130,9 @@ int main(){
             running = 0;
     }
 
-    digits = GetSudokuDigits(digitRects, sudokuPath, network);
+    digits = SolveGrayScale(digitGrayScales, 81, network);
     if (digits == NULL){
-        printf("Error: main, GetSudokuDigits returned NULL\n");
+        printf("Error: main, SolveGrayScale returned NULL\n");
         errorCode = 6;
         goto cleanup;
     }
@@ -116,7 +140,7 @@ int main(){
     printf("\n");
     for(int i = 0; i < 9; i++){
         for(int j = 0; j < 9; j++){
-            printf("%d ", digits[i][j]);
+            printf("%d ", digits[i*9+j]);
         }
         printf("\n");
     }
@@ -127,11 +151,23 @@ int main(){
         }
     }
     cleanup:
+    MatDestroy(gridGrayScale);
+    if (digitGrayScales != NULL){
+        for (int i = 0; i < 81; i++){
+            MatDestroy(digitGrayScales[i]);
+        }
+        network->layers[0]->activation = NULL; // important
+    }
+    // clean network
+    DestroyNetwork(network);
+
     free(horizontalLines);
     free(horizontalBlocks);
     free(verticalLines);
     free(verticalBlocks);
-    MatDestroy(grayScale);
+
+    // clean digits
+    free(digits);
 
     // clean digitRects
     if (digitRects != NULL){
@@ -141,13 +177,10 @@ int main(){
         free(digitRects);
     }
 
-    // clean digits
-    if (digits != NULL){
-        for(int i = 0; i < 9; i++){
-            free(digits[i]);
-        }
-        free(digits);
-    }
+    // free digitTextures
+    for (int i = 0; i < 81; i++)
+        SDL_DestroyTexture(digitTextures[i]);
+    free(digitTextures);
 
     // clean sample
     if (sample10 != NULL){
@@ -181,8 +214,7 @@ int main(){
         free(fileCount);
     }
 
-    // clean network and sdl
-    DestroyNetwork(network);
+    // clean sdl
     DestroySDL();
 
     //printf("matCount : %ld\n", matCount);

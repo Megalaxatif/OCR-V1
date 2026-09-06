@@ -33,7 +33,7 @@ char*** GetAllTrainingFileNames(size_t** _fileCount){
     char*** files = malloc(10*sizeof(char**)); // files[i] correspond to the list of training image path for the digit i
     size_t* fileCount = malloc(10*sizeof(size_t)); // fileCount[i] correspond to the number of files in files[i]
 
-    char path[50];
+    char path[100];
     strcpy(path, TRAIN_DIRECTORY_PATH);
     size_t pathLength = strlen(path);
 

@@ -75,6 +75,28 @@ int DrawFilledRects(SDL_Rect* rects, size_t rectCount, struct Mat* referenceMatr
     return 0;
 }
 
+int DrawDigitGrayScale(struct Mat* digitGrayScale, size_t rectCount){
+    if (digitGrayScale == NULL) {
+        printf("Error: DrawDigitGrayScale, matrix pointer is NULL\n");
+        return 1;
+    }
+    if (digitGrayScale->col > 1){
+        printf("Error: DrawDigitGrayScale, the matrix given must be a column matrix but this one has %ld columns, use GetGrayScaleMatrix to get a valid matrix\n", digitGrayScale->col);
+        return 2;
+    }
+    SDL_SetRenderTarget(renderer, NULL);
+
+    for(size_t y = 0; y < NETWORK_IMG_SIZE; y++){
+        for(size_t x = 0; x < NETWORK_IMG_SIZE; x++){
+            Uint8 grayCode = digitGrayScale->data[y*NETWORK_IMG_SIZE + x][0];
+            SDL_SetRenderDrawColor(renderer, grayCode, grayCode, grayCode, 255);
+            SDL_RenderDrawPoint(renderer, x, y);
+        }
+    }
+    return 0;
+}
+
+
 int DrawGrayScale(struct Mat* grayScale){
     if (grayScale == NULL) {
         printf("Error: DisplayGrayScale, matrix pointer is NULL\n");
@@ -456,49 +478,52 @@ SDL_Rect** GetSudokuDigitRects(SDL_Rect* horizontalBlocks, SDL_Rect* verticalBlo
     return digitRects;
 }
 
-int* SolveDigitTextures(SDL_Texture** digitTextures, size_t textureCount, struct Network* network){
-    int* digits = malloc(textureCount*sizeof(int));
+struct Mat** ConvertTexturesToGrayScale(SDL_Texture** textures, size_t textureCount){
+    struct Mat** grayScales = malloc(textureCount * sizeof(struct Mat*));
 
     SDL_Surface* rgbaSurface = SDL_CreateRGBSurfaceWithFormat( 0, NETWORK_IMG_SIZE, NETWORK_IMG_SIZE, 32, SDL_PIXELFORMAT_RGBA8888);
-    int error = 0;
 
     for(int i = 0; i < textureCount; i++){
-        SDL_SetRenderTarget(renderer, digitTextures[i]);
+        SDL_SetRenderTarget(renderer, textures[i]);
         SDL_RenderReadPixels( renderer, NULL, SDL_PIXELFORMAT_RGBA8888, rgbaSurface->pixels, rgbaSurface->pitch);
 
         SDL_Surface* digitSurface = SDL_ConvertSurfaceFormat(rgbaSurface, SDL_PIXELFORMAT_INDEX8, 0);
 
-        struct Mat* digitGrayScale = GetForwardPassGrayScaleMatrix(digitSurface);
+        grayScales[i] = GetForwardPassGrayScaleMatrix(digitSurface);
         SDL_FreeSurface(digitSurface);
 
-        if (digitGrayScale == NULL){
-            printf("Error: SolveDigitTextures, GetForwardPassGrayScaleMatrix returned NULL\n");
-            error = 1;
-            goto clear;
+        if (grayScales[i] == NULL){
+            printf("Error: ConvertTexturesToGrayScale, GetForwardPassGrayScaleMatrix returned NULL\n");
+            for(int j = 0; j < i; j++){
+                MatDestroy(grayScales[j]);
+            }
+            free(grayScales);
+            return NULL;
         }
+    }
+    return grayScales;
+}
 
-        int errorCode = ForwardPass(network, digitGrayScale);
-        MatDestroy(digitGrayScale);
-        network->layers[0]->activation = NULL; // important
+int* SolveGrayScale(struct Mat** grayScales, size_t grayScaleCount, struct Network* network){
+    int* digits = malloc(grayScaleCount * sizeof(int));
+    for(int i = 0; i < grayScaleCount; i++){
+        int errorCode = ForwardPass(network, grayScales[i]);
+        //MatDestroy(grayScales[i]);
+        //network->layers[0]->activation = NULL; // important
 
         if (errorCode != 0){
-            printf("Error: SolveDigitTextures, ForwardPass returned %d\n", errorCode);
-            error = 1;
-            goto clear;
+            printf("Error: SolveGrayScale, ForwardPass returned %d\n", errorCode);
+            free(digits);
+            return NULL;
         }
         int guessedDigit = GetGuessedDigit(network);
         digits[i] = guessedDigit;
     }
-    clear:
-    if (error){
-        free(digits);
-        return NULL;
-    }
     return digits;
 }
 
-SDL_Texture** GetSudokuDigitTextures(SDL_Rect** digitRects, char* sudokuFilePath, struct Network* network){
-    if(digitRects == NULL || *digitRects == NULL || sudokuFilePath == NULL || network == NULL){
+SDL_Texture** GetSudokuDigitTextures(SDL_Rect** digitRects, char* sudokuFilePath){
+    if(digitRects == NULL || *digitRects == NULL || sudokuFilePath == NULL){
         printf("Error: GetSudokuDigits, invalid argument\n");
         return NULL;
     }

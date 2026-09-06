@@ -16,11 +16,13 @@ int SortBlocks(SDL_Rect** horizontalBlocks, SDL_Rect** verticalBlocks, size_t* h
 // return a two dimentional array of the rectangles of each digit in the grid.
 // IMPORTANT: this function supposes that horizontalBlocks and verticalBlocks represent a valid sudoku grid
 SDL_Rect** GetSudokuDigitRects(SDL_Rect* horizontalBlocks, SDL_Rect* verticalBlocks);
-SDL_Texture** GetSudokuDigitTextures(SDL_Rect** digitRects, char* sudokuFilePath, struct Network* network);
-int* SolveDigitTextures(SDL_Texture** textures, size_t textureCount);
+SDL_Texture** GetSudokuDigitTextures(SDL_Rect** digitRects, char* sudokuFilePath);
+struct Mat** ConvertTexturesToGrayScale(SDL_Texture** textures, size_t textureCount);
+int* SolveGrayScale(struct Mat** grayScales, size_t grayScaleCount, struct Network* network);
 int DrawRects(SDL_Rect* rects, size_t rectCount, struct Mat* referenceMatrix, SDL_Color color); // draw the list of rectangles with the given color on the screen, referenceMatrix is needed to resize the rectangles correctly
 int DrawFilledRects(SDL_Rect* rects, size_t rectCount, struct Mat* referenceMatrix, SDL_Color color);
+int DrawGrayScale(struct Mat* grayScale);
+int DrawDigitGrayScale(struct Mat* digitGrayScale); // the digits given to the network are represented as column matrices, so we need a special function to display them
 struct Mat* GetGridGrayScaleMatrix(char* imgFileName);// loads the given image and returns a matrix of its grayscale
 // does the exact same as GetGrayScaleMatrix but stores the result in a column matrix so that it can be used for the network
 struct Mat* GetForwardPassGrayScaleMatrix(SDL_Surface* trainingSurface);
-int DrawGrayScale(struct Mat* grayScale);
