@@ -11,6 +11,10 @@
 #include <stdalign.h>
 
 struct Mat* InvertForwardPassGrayScaleMatrix(struct Mat* grayScale){
+    if (grayScale == NULL){
+        printf("Error: InvertForwardPassGrayScaleMatrix, invalid argument");
+        return NULL;
+    }
     for(int i = 0; i < grayScale->row; i++){
         for(int j = 0; j < grayScale->col; j++){
             grayScale->data[i][j] = 1 - grayScale->data[i][j];
@@ -127,8 +131,8 @@ int DrawGrayScale(struct Mat* grayScale){
 // VERTICAL----------------------------------
 
 SDL_Rect* ScanVerticalLines(struct Mat* grayScale, size_t* lineCount_){
-    if (grayScale == NULL){
-        printf("Error: ScanVerticalLines, grayScale is NULL\n");
+    if (grayScale == NULL||lineCount_ == NULL){
+        printf("Error: ScanVerticalLines, invalid argument\n");
         return NULL;
     }
     // TODO: remove that and use a point buffer instead (use one similar to minimake)
@@ -268,8 +272,8 @@ SDL_Rect* ConvertVerticalLinesToBlocks(SDL_Rect* lines, size_t lineCount, size_t
 // HORIZONTAL----------------------------------
 
 SDL_Rect* ScanHorizontalLines(struct Mat* grayScale, size_t* lineCount_){
-    if (grayScale == NULL){
-        printf("Error: ScanHorizontalLines, grayScale is NULL\n");
+    if (grayScale == NULL || lineCount_ == NULL){
+        printf("Error: ScanHorizontalLines, invalid argument\n");
         return NULL;
     }
     // TODO: remove that and use a point buffer instead (use one similar to minimake)
@@ -329,7 +333,7 @@ SDL_Rect* ScanHorizontalLines(struct Mat* grayScale, size_t* lineCount_){
     return lines;
 }
 
-SDL_Rect* ConvertHorizontalLinesToBlocks(SDL_Rect* lines, size_t lineCount, size_t* blockCount_){ // convert adjacent horizontal lines into a rectangle
+SDL_Rect* ConvertHorizontalLinesToBlocks(SDL_Rect* lines, size_t lineCount, size_t* blockCount_){
     if (lines == NULL || blockCount_ == NULL|| lineCount <= 0){
         printf("Error: ConvertHorizontalLinesToBlocks, invalid argument\n");
         return NULL;
@@ -479,6 +483,10 @@ SDL_Rect** GetSudokuDigitRects(SDL_Rect* horizontalBlocks, SDL_Rect* verticalBlo
 }
 
 struct Mat** ConvertTexturesToGrayScale(SDL_Texture** textures, size_t textureCount){
+    if (textures == NULL || textureCount <= 0){
+        printf("Error: ConvertTexturesToGrayScale, invalid argument\n");
+        return NULL;
+    }
     struct Mat** grayScales = malloc(textureCount * sizeof(struct Mat*));
 
     SDL_Surface* rgbaSurface = SDL_CreateRGBSurfaceWithFormat( 0, NETWORK_IMG_SIZE, NETWORK_IMG_SIZE, 32, SDL_PIXELFORMAT_RGBA8888);
@@ -505,6 +513,10 @@ struct Mat** ConvertTexturesToGrayScale(SDL_Texture** textures, size_t textureCo
 }
 
 int* SolveGrayScale(struct Mat** grayScales, size_t grayScaleCount, struct Network* network){
+    if (grayScales == NULL || grayScaleCount <= 0 || network == NULL){
+        printf("Error: SolveGrayScale, invalid argument\n");
+        return NULL;
+    }
     int* digits = malloc(grayScaleCount * sizeof(int));
     for(int i = 0; i < grayScaleCount; i++){
         int errorCode = ForwardPass(network, grayScales[i]);
@@ -610,7 +622,10 @@ struct Mat* GetGridGrayScaleMatrix(char* imgFileName){
 }
 
 struct Mat* GetForwardPassGrayScaleMatrix(SDL_Surface* surface){
-
+    if (surface == NULL){
+        printf("Error: GetForwardPassGrayScaleMatrix, surface is NULL\n");
+        return NULL;
+    }
     if(surface->h != NETWORK_IMG_SIZE|| surface->w != NETWORK_IMG_SIZE){
         printf("Error: GetForwardPassGrayScaleMatrix, the width and height of the surface doesn't match the value of the NETWORK_IMG_SIZE constant which is set to %d pixels\n", NETWORK_IMG_SIZE);
         SDL_FreeSurface(surface);

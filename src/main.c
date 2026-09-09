@@ -28,6 +28,7 @@ int main(){
     for(int i = 0; i < 10; i++){
         sample10[i] = malloc(100 * sizeof(char));
     }
+    answer10 = GetAnswer10();
 
     network = CreateNetwork(0.02, 4, neuronsPerLayer, NULL, NULL);
     if (network == NULL){
@@ -35,19 +36,14 @@ int main(){
         errorCode = 1;
         goto cleanup;
     }
-    answer10 = GetAnswer10();
-    if (answer10 == NULL){
-        printf("Error: main, answer10 is NULL\n");
-        errorCode = 2;
-        goto cleanup;
-    }
+
     files = GetAllTrainingFileNames(&fileCount);
     if (files == NULL){
         printf("Error: main, files is NULL\n");
         errorCode = 3;
         goto cleanup;
     }
-    char* sudokuPath = "/home/megalaxatif/Documents/code/OCR/sudoku2.png";
+    char* sudokuPath = "/home/megalaxatif/Documents/code/OCR-V1/sudoku2.png";
     struct Mat* gridGrayScale = GetGridGrayScaleMatrix(sudokuPath);
     size_t horizontalLineCount = 0;
     SDL_Rect* horizontalLines = ScanHorizontalLines(gridGrayScale, &horizontalLineCount);
@@ -96,7 +92,7 @@ int main(){
     SDL_SetRenderTarget(renderer, NULL);
     SDL_RenderClear(renderer);
 
-    //render
+    // render
     // DrawGrayScale(gridGrayScale);
     // DrawFilledRects(horizontalBlocks, horizontalBlockCount, gridGrayScale, (SDL_Color){255, 0, 0, 255});
     // //DrawRects(verticalLines, verticalLineCount);
@@ -178,10 +174,11 @@ int main(){
     }
 
     // free digitTextures
-    for (int i = 0; i < 81; i++)
-        SDL_DestroyTexture(digitTextures[i]);
-    free(digitTextures);
-
+    if (digitTextures != NULL){
+        for (int i = 0; i < 81; i++)
+            SDL_DestroyTexture(digitTextures[i]);
+        free(digitTextures);
+    }
     // clean sample
     if (sample10 != NULL){
         for(int i = 0; i < 10; i++){
