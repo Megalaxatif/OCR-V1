@@ -42,7 +42,7 @@ double Random(double min, double max){
 }
 
 size_t RandomInt(size_t min, size_t max){
-    return min + (max - min) * ((size_t)rand() / RAND_MAX);
+    return min + rand() % (max - min + 1);
 }
 
 void InitBiases(struct Mat* B){

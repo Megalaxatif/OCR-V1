@@ -24,3 +24,7 @@ int Train(struct Network* network, char** sample, size_t sampleSize, struct Mat*
 struct Mat** GetAnswer10(); // get the list of answer matrix for a training of 1 image on each digit from 0 to 9
 struct Network* CreateNetwork(double learningRate, size_t layerCount, int* neuronsPerLayer, struct Mat* weights[], struct Mat* biases[]); // create a network with the weights and biases given if not NULL, otherwise create a new network
 void DestroyNetwork(struct Network* network);
+void PrintDigitGrayScales(struct Mat** digitGrayScale, size_t grayScaleCount);
+int* SolveGrayScales(struct Mat** grayScales, size_t grayScaleCount, struct Network* network);
+int* SolveSudoku(char* sudokuPath, struct Network*);
+int SolveImage(char* path, struct Network* network);

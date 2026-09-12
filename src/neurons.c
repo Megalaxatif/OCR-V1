@@ -2,7 +2,10 @@
 #include "header/image.h"
 #include "header/math.h"
 #include <SDL2/SDL_image.h>
-
+#include <SDL2/SDL_pixels.h>
+#include <SDL2/SDL_render.h>
+#include <SDL2/SDL_surface.h>
+#include "header/init.h"
 double correctCounter = 0;
 double counter = 0;
 
@@ -117,7 +120,33 @@ int GetGuessedDigit(struct Network* network){
     }
     return biggestIndex; // the guessed digit corresponds to this index
 }
+int TMP(char* sample, struct Network *network){ // TODO: use solveImage instead, problem with matDestroy after forwardPass
+    SDL_Surface* trainingSurface = IMG_Load(sample);
+    if (trainingSurface == NULL){
+        printf("Error: Training, impossible to load the image at %s\n", sample);
+        return -4;
+    }
+    SDL_Surface *tmp = SDL_ConvertSurfaceFormat(trainingSurface, SDL_PIXELFORMAT_RGBA8888, 0);
+    SDL_FreeSurface(trainingSurface);
+    trainingSurface = tmp;
 
+
+    struct Mat* grayScale = GetForwardPassGrayScaleMatrix(trainingSurface);
+    SDL_FreeSurface(trainingSurface);
+    if (grayScale == NULL){
+        printf("Error: Train, GetForwardPassGrayScaleMatrix returned NULL\n");
+        return -4;
+    }
+
+    int errorCode = ForwardPass(network, grayScale);
+    if (errorCode != 0){
+        printf("Error: Train, ForwardPass returned %d\n", errorCode);
+        return errorCode;
+    }
+
+    int guessedDigit = GetGuessedDigit(network);
+    return guessedDigit;
+}
 
 int Train(struct Network* network, char** sample, size_t sampleSize, struct Mat* answer[]){
     if (sampleSize < 1||network == NULL || sample == NULL || answer == NULL){
@@ -139,37 +168,14 @@ int Train(struct Network* network, char** sample, size_t sampleSize, struct Mat*
 
     for(size_t k = 0; k < sampleSize; k++){
 
-        SDL_Surface* trainingSurface = IMG_Load(sample[k]);
-
-        if (trainingSurface == NULL){
-            printf("Error: Training, impossible to load the image at %s\n", sample[k]);
-            errorCode = 4;
-            goto clear;
-        }
-
-        struct Mat* grayScale = GetForwardPassGrayScaleMatrix(trainingSurface);
-        SDL_FreeSurface(trainingSurface);
-        if (grayScale == NULL){
-            printf("Error: Train, GetForwardPassGrayScaleMatrix returned NULL\n");
-            errorCode = 3;
-            goto clear;
-        }
-
-        errorCode = ForwardPass(network, grayScale);
-        if (errorCode != 0){
-            printf("Error: Train, ForwardPass returned %d\n", errorCode);
-            goto clear;
-        }
-
-        int guessedDigit = GetGuessedDigit(network);
-
+        int guessedDigit = TMP(sample[k], network);
         counter++;
         if (guessedDigit == k){
             correctCounter++;
             printf("hit  | ");
         }
         else printf("miss | ");
-        printf("SCORE: %f\n", correctCounter/counter);
+        printf("%s vs %d | SCORE: %f\n", sample[k], guessedDigit, correctCounter/counter);
 
         // BACKPROBAGATION----------------
         // error  of the last layer
@@ -216,8 +222,8 @@ int Train(struct Network* network, char** sample, size_t sampleSize, struct Mat*
             i--;
         }
         MatDestroy(delta); // destroy the last delta
-
-        MatDestroy(grayScale);
+        // important
+        MatDestroy(network->layers[0]->activation);
         network->layers[0]->activation = NULL;
     }
 
@@ -293,4 +299,187 @@ void DestroyNetwork(struct Network* network){
     }
     free(network->layers);
     free(network);
+}
+
+void PrintDigitGrayScales(struct Mat** digitGrayScale, size_t grayScaleCount){
+    if (digitGrayScale == NULL){
+        printf("Error: MatPrint, matrix pointer is NULL\n");
+        return;
+    }
+    for(int i = 0; i < grayScaleCount; i++){
+        struct Mat* currentGrayScale = digitGrayScale[i];
+        if (currentGrayScale->col != 1 || currentGrayScale->row != NETWORK_IMG_SIZE*NETWORK_IMG_SIZE){
+            printf("Error: PrintDigitGrayScale, the matrix given doesn't have valid dimensions for a digit grayscale");
+            return;
+        }
+        for(size_t i = 0; i < NETWORK_IMG_SIZE; i++){
+            for(size_t j = 0; j < NETWORK_IMG_SIZE; j++){
+                printf("%.1f ", currentGrayScale->data[i*NETWORK_IMG_SIZE+j][0]);
+            }
+            printf("\n");
+        }
+        printf("\n");
+    }
+}
+
+int* SolveGrayScales(struct Mat** grayScales, size_t grayScaleCount, struct Network* network){
+    if (grayScales == NULL || grayScaleCount <= 0 || network == NULL){
+        printf("Error: SolveGrayScales, invalid argument\n");
+        return NULL;
+    }
+    int* digits = malloc(grayScaleCount * sizeof(int));
+    for(int i = 0; i < grayScaleCount; i++){
+        int errorCode = ForwardPass(network, grayScales[i]);
+        //MatDestroy(grayScales[i]);
+        //network->layers[0]->activation = NULL; // important
+
+        if (errorCode != 0){
+            printf("Error: SolveGrayScales, ForwardPass returned %d\n", errorCode);
+            free(digits);
+            return NULL;
+        }
+        int guessedDigit = GetGuessedDigit(network);
+        digits[i] = guessedDigit;
+    }
+    return digits;
+}
+
+int SolveImage(char* path, struct Network* network){
+    SDL_Surface* trainingSurface = IMG_Load(path);
+    if (trainingSurface == NULL){
+        printf("Error: SolveImage, impossible to load the image at %s\n", path);
+        return -1;
+    }
+    if (trainingSurface->w != NETWORK_IMG_SIZE || trainingSurface->h != NETWORK_IMG_SIZE){
+        printf("Error: SolveImage, invalid image dimentions\n");
+        return -2;
+    }
+    SDL_Surface *tmp = SDL_ConvertSurfaceFormat(trainingSurface, SDL_PIXELFORMAT_RGBA8888, 0);
+    SDL_FreeSurface(trainingSurface);
+    trainingSurface = tmp;
+
+    struct Mat* grayScale = GetForwardPassGrayScaleMatrix(trainingSurface);
+    SDL_FreeSurface(trainingSurface);
+
+    if (grayScale == NULL){
+        printf("Error: SolveImage, GetForwardPassGrayScaleMatrix returned NULL\n");
+        return -2;
+    }
+
+    int errorCode = ForwardPass(network, grayScale);
+    MatDestroy(grayScale);
+    if (errorCode != 0){
+        printf("Error: SolveImage, ForwardPass returned %d\n", errorCode);
+        return -3;
+    }
+
+    int guessedDigit = GetGuessedDigit(network);
+
+    return guessedDigit;
+}
+
+int* SolveSudoku(char* sudokuPath, struct Network* network){
+    if (sudokuPath == NULL || network == NULL){
+        printf("Error: SolveSudoku, invalid argument\n");
+        return NULL;
+    }
+    struct Mat* gridGrayScale = GetGridGrayScaleMatrix(sudokuPath);
+    if (gridGrayScale == NULL){
+        printf("Error: SolveSudoku, gridGrayScale is NULL\n");
+        return NULL;
+    }
+    struct SDL_Rect* digitRects = NULL;
+    SDL_Texture** digitTextures = NULL;
+    struct Mat** digitGrayScales = NULL;
+    int* digits = NULL;
+
+    size_t horizontalLineCount = 0;
+    SDL_Rect* horizontalLines = ScanHorizontalLines(gridGrayScale, &horizontalLineCount);
+    size_t horizontalBlockCount = 0;
+    SDL_Rect* horizontalBlocks = ConvertHorizontalLinesToBlocks(horizontalLines, horizontalLineCount, &horizontalBlockCount); // this function destroys horizontalLines
+
+    size_t verticalLineCount = 0;
+    SDL_Rect* verticalLines = ScanVerticalLines(gridGrayScale, &verticalLineCount);
+    size_t verticalBlockCount = 0;
+    SDL_Rect* verticalBlocks = ConvertVerticalLinesToBlocks(verticalLines, verticalLineCount, &verticalBlockCount); // this function destroys verticalLines
+
+    int ret = SortBlocks(&horizontalBlocks, &verticalBlocks, &horizontalBlockCount, &verticalBlockCount);
+    if (ret != 0){
+        printf("Error: SolveSudoku, SortBlocks returned %d\n", ret);
+        goto cleanup;
+    }
+
+    digitRects = GetSudokuDigitRects(horizontalBlocks, verticalBlocks); // always return a 81 array
+    if (digitRects == NULL){
+        printf("Error: SolveSudoku, GetSudokuDigitRects returned NULL\n");
+        goto cleanup;
+    }
+    digitTextures = GetSudokuDigitTextures(digitRects, sudokuPath);
+    if (digitTextures == NULL){
+        printf("Error: SolveSudoku, GetSudokuDigitTextures returned NULL\n");
+        goto cleanup;
+    }
+    // debug -----
+    // SDL_SetRenderTarget(renderer, NULL);
+    // for(int i = 0; i < 9; i++){
+    //     for(int j = 0; j < 9; j++){
+    //         SDL_RenderCopy(renderer, digitTextures[i*9+j], NULL, digitRects+i*9+j);
+    //     }
+    // }
+    //-------
+    digitGrayScales = ConvertTexturesToGrayScale(digitTextures, 81);
+    if (digitGrayScales == NULL){
+        printf("Error: SolveSudoku, ConvertTexturesToGrayScale returned NULL\n");
+        goto cleanup;
+    }
+    // for(int i = 0; i < 81; i++){
+    //     struct Mat* tmp = InvertForwardPassGrayScaleMatrix(digitGrayScales[i]);
+    //      DrawDigitGrayScales(&tmp, digitRects + i, 1, gridGrayScale);
+    // }
+    //PrintDigitGrayScales(digitGrayScales, 81); // debug
+    // SDL_Surface* sudoku = IMG_Load(sudokuPath);
+    // SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, sudoku);
+    // SDL_FreeSurface(sudoku);
+    // SDL_SetRenderTarget(renderer, NULL);
+    // SDL_RenderCopy(renderer, texture, NULL, NULL);
+    // SDL_DestroyTexture(texture);
+    DrawDigitGrayScales(digitGrayScales, digitRects, 81, gridGrayScale);
+    //DrawRects(digitRects, 81, gridGrayScale, (SDL_Color){0,255,0,255});
+
+    digits = SolveGrayScales(digitGrayScales, 81, network);
+    if (digits == NULL){
+        printf("Error: SolveSudoku, SolveGrayScales returned NULL\n");
+        goto cleanup;
+    }
+
+    cleanup:
+    // destroy grid
+    MatDestroy(gridGrayScale);
+
+    // free lines and blocks
+    free(horizontalLines);
+    free(horizontalBlocks);
+    free(verticalLines);
+    free(verticalBlocks);
+
+    // free digitRects
+    if (digitRects != NULL){
+        free(digitRects);
+    }
+
+    // destroy digitTextures
+    if (digitTextures != NULL){
+        for (int i = 0; i < 81; i++)
+            SDL_DestroyTexture(digitTextures[i]);
+        free(digitTextures);
+    }
+
+    if (digitGrayScales != NULL){
+        for (int i = 0; i < 81; i++)
+            MatDestroy(digitGrayScales[i]);
+        network->layers[0]->activation = NULL; // important
+        free(digitGrayScales);
+    }
+
+    return digits;
 }

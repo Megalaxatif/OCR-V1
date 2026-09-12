@@ -7,6 +7,8 @@
 #define SCREEN_W 1000
 #define SCREEN_H 1000
 #define NETWORK_IMG_SIZE 28 // pixel width and height of the images that the network can take
+#define GRID_OFFSET 3 // the rectangle of a digit in the grid might include part of the grid so we add this offset on each side of the rectangle to prevent that
+#define BLANKNESS_THRESHOLD 95 // percentage of values close to 0 we must have in a matrix to say that it's blank
 //#define TRAIN_DIRECTORY_PATH "../train/" // path where the train directory containing all the training images is in the project
 #define TRAIN_DIRECTORY_PATH "/home/megalaxatif/Documents/code/OCR-V1/database/train5/"
 

@@ -79,24 +79,42 @@ int DrawFilledRects(SDL_Rect* rects, size_t rectCount, struct Mat* referenceMatr
     return 0;
 }
 
-int DrawDigitGrayScale(struct Mat* digitGrayScale, size_t rectCount){
-    if (digitGrayScale == NULL) {
-        printf("Error: DrawDigitGrayScale, matrix pointer is NULL\n");
+int DrawDigitGrayScales(struct Mat** digitGrayScales, SDL_Rect* rects, size_t rectCount, struct Mat* referenceMatrix){
+    if (digitGrayScales == NULL || *digitGrayScales == NULL || rects == NULL || referenceMatrix == NULL){
+        printf("Error: DrawDigitGrayScales, invalid argument\n");
         return 1;
     }
-    if (digitGrayScale->col > 1){
-        printf("Error: DrawDigitGrayScale, the matrix given must be a column matrix but this one has %ld columns, use GetGrayScaleMatrix to get a valid matrix\n", digitGrayScale->col);
-        return 2;
-    }
-    SDL_SetRenderTarget(renderer, NULL);
+    SDL_Texture* texture = SDL_CreateTexture(
+        renderer,
+        SDL_PIXELFORMAT_RGBA8888,
+        SDL_TEXTUREACCESS_TARGET,
+        referenceMatrix->col,
+        referenceMatrix->row
+    );
+    SDL_SetTextureBlendMode(texture, SDL_BLENDMODE_BLEND);
+    SDL_SetRenderTarget(renderer, texture);
+    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
+    SDL_RenderClear(renderer);
 
-    for(size_t y = 0; y < NETWORK_IMG_SIZE; y++){
-        for(size_t x = 0; x < NETWORK_IMG_SIZE; x++){
-            Uint8 grayCode = digitGrayScale->data[y*NETWORK_IMG_SIZE + x][0];
-            SDL_SetRenderDrawColor(renderer, grayCode, grayCode, grayCode, 255);
-            SDL_RenderDrawPoint(renderer, x, y);
+    for(int i = 0; i < rectCount; i++){
+        struct Mat* currentGrayScale = digitGrayScales[i];
+        //MatPrint(currentGrayScale);
+        SDL_Rect currentRect = rects[i];
+        if (currentGrayScale->col != 1 || currentGrayScale->row != NETWORK_IMG_SIZE*NETWORK_IMG_SIZE){
+            printf("Error: DrawDigitGrayScales, the matrix given doesn't have valid dimensions for a digit grayscale");
+            return 2;
+        }
+        for(size_t y = 0; y < NETWORK_IMG_SIZE; y++){
+            for(size_t x = 0; x < NETWORK_IMG_SIZE; x++){
+                Uint8 grayCode = currentGrayScale->data[y*NETWORK_IMG_SIZE + x][0]*255;
+                SDL_SetRenderDrawColor(renderer, grayCode, grayCode, grayCode, 255);
+                SDL_RenderDrawPoint(renderer, x + currentRect.x, y + currentRect.y);
+            }
         }
     }
+    SDL_SetRenderTarget(renderer, NULL);
+    SDL_RenderCopy(renderer, texture, NULL, NULL);
+    SDL_DestroyTexture(texture);
     return 0;
 }
 
@@ -455,16 +473,13 @@ int SortBlocks(SDL_Rect** horizontalBlocks, SDL_Rect** verticalBlocks, size_t* h
     return 0;
 }
 
-SDL_Rect** GetSudokuDigitRects(SDL_Rect* horizontalBlocks, SDL_Rect* verticalBlocks){
+SDL_Rect* GetSudokuDigitRects(SDL_Rect* horizontalBlocks, SDL_Rect* verticalBlocks){
     if (horizontalBlocks == NULL || verticalBlocks == NULL){
         printf("Error: GetDigitRects, invalid argument\n");
         return NULL;
     }
     // a sudoku has 81 digits
-    SDL_Rect** digitRects = malloc(9*sizeof(SDL_Rect*));
-    for(int i = 0; i < 9; i++){
-        digitRects[i] = malloc(9*sizeof(SDL_Rect));
-    }
+    SDL_Rect* digitRects = malloc(81*sizeof(SDL_Rect));
 
     for(size_t i = 0; i < 9; i++){
         for(size_t j = 0; j < 9; j++){
@@ -472,11 +487,11 @@ SDL_Rect** GetSudokuDigitRects(SDL_Rect* horizontalBlocks, SDL_Rect* verticalBlo
             SDL_IntersectRect(horizontalBlocks + i, verticalBlocks + j, &res);
             SDL_Rect res2 = {0}; // diagonal to res
             SDL_IntersectRect(horizontalBlocks + i + 1, verticalBlocks + j + 1, &res2);
-            int x = res.x + res.w;
-            int y = res.y + res.h;
-            int h = res2.y - y;
-            int w = res2.x - x;
-            digitRects[i][j] = (SDL_Rect){.x = x, .y = y, .h = h, .w = w};
+            int x = res.x + res.w + GRID_OFFSET;
+            int y = res.y + res.h + GRID_OFFSET;
+            int h = res2.y - y - GRID_OFFSET;
+            int w = res2.x - x - GRID_OFFSET;
+            digitRects[i*9+j] = (SDL_Rect){.x = x, .y = y, .h = h, .w = w};
         }
     }
     return digitRects;
@@ -488,17 +503,14 @@ struct Mat** ConvertTexturesToGrayScale(SDL_Texture** textures, size_t textureCo
         return NULL;
     }
     struct Mat** grayScales = malloc(textureCount * sizeof(struct Mat*));
-
     SDL_Surface* rgbaSurface = SDL_CreateRGBSurfaceWithFormat( 0, NETWORK_IMG_SIZE, NETWORK_IMG_SIZE, 32, SDL_PIXELFORMAT_RGBA8888);
 
     for(int i = 0; i < textureCount; i++){
         SDL_SetRenderTarget(renderer, textures[i]);
-        SDL_RenderReadPixels( renderer, NULL, SDL_PIXELFORMAT_RGBA8888, rgbaSurface->pixels, rgbaSurface->pitch);
+        SDL_RenderReadPixels(renderer, NULL, SDL_PIXELFORMAT_RGBA8888, rgbaSurface->pixels, rgbaSurface->pitch);
 
-        SDL_Surface* digitSurface = SDL_ConvertSurfaceFormat(rgbaSurface, SDL_PIXELFORMAT_INDEX8, 0);
-
-        grayScales[i] = GetForwardPassGrayScaleMatrix(digitSurface);
-        SDL_FreeSurface(digitSurface);
+        grayScales[i] = GetForwardPassGrayScaleMatrix(rgbaSurface);
+        //PrintDigitGrayScales(grayScales + i, 1);
 
         if (grayScales[i] == NULL){
             printf("Error: ConvertTexturesToGrayScale, GetForwardPassGrayScaleMatrix returned NULL\n");
@@ -506,36 +518,16 @@ struct Mat** ConvertTexturesToGrayScale(SDL_Texture** textures, size_t textureCo
                 MatDestroy(grayScales[j]);
             }
             free(grayScales);
+            SDL_FreeSurface(rgbaSurface);
             return NULL;
         }
     }
+    SDL_FreeSurface(rgbaSurface);
     return grayScales;
 }
 
-int* SolveGrayScale(struct Mat** grayScales, size_t grayScaleCount, struct Network* network){
-    if (grayScales == NULL || grayScaleCount <= 0 || network == NULL){
-        printf("Error: SolveGrayScale, invalid argument\n");
-        return NULL;
-    }
-    int* digits = malloc(grayScaleCount * sizeof(int));
-    for(int i = 0; i < grayScaleCount; i++){
-        int errorCode = ForwardPass(network, grayScales[i]);
-        //MatDestroy(grayScales[i]);
-        //network->layers[0]->activation = NULL; // important
-
-        if (errorCode != 0){
-            printf("Error: SolveGrayScale, ForwardPass returned %d\n", errorCode);
-            free(digits);
-            return NULL;
-        }
-        int guessedDigit = GetGuessedDigit(network);
-        digits[i] = guessedDigit;
-    }
-    return digits;
-}
-
-SDL_Texture** GetSudokuDigitTextures(SDL_Rect** digitRects, char* sudokuFilePath){
-    if(digitRects == NULL || *digitRects == NULL || sudokuFilePath == NULL){
+SDL_Texture** GetSudokuDigitTextures(SDL_Rect* digitRects, char* sudokuFilePath){
+    if(digitRects == NULL || sudokuFilePath == NULL){
         printf("Error: GetSudokuDigits, invalid argument\n");
         return NULL;
     }
@@ -556,8 +548,8 @@ SDL_Texture** GetSudokuDigitTextures(SDL_Rect** digitRects, char* sudokuFilePath
 
     for(int i = 0; i < 9; i++){
         for(int j = 0; j < 9; j++){
-            SDL_SetRenderTarget(renderer, digitTextures[i*9 + j]);
-            SDL_RenderCopy( renderer, sudokuTexture, digitRects[i] + j, NULL);
+            SDL_SetRenderTarget(renderer, digitTextures[i*9+j]);
+            SDL_RenderCopy( renderer, sudokuTexture, digitRects + i*9+j, NULL);
         }
     }
 
@@ -609,7 +601,7 @@ struct Mat* GetGridGrayScaleMatrix(char* imgFileName){
         for(size_t y = 0; y < surface->h; y++){
             for(size_t x = 0; x < surface->w; x++){
                 Uint8* pixel = pixels + y * surface->pitch + x*3;
-                double grayCode =
+                double grayCode = // TODO: use GetRGBA here
                     0.299 * pixel[0]/255 +
                     0.587 * pixel[1]/255 +
                     0.114 * pixel[2]/255;
@@ -628,31 +620,30 @@ struct Mat* GetForwardPassGrayScaleMatrix(SDL_Surface* surface){
     }
     if(surface->h != NETWORK_IMG_SIZE|| surface->w != NETWORK_IMG_SIZE){
         printf("Error: GetForwardPassGrayScaleMatrix, the width and height of the surface doesn't match the value of the NETWORK_IMG_SIZE constant which is set to %d pixels\n", NETWORK_IMG_SIZE);
-        SDL_FreeSurface(surface);
         return NULL;
     }
 
-
     int format = surface->format->format;
-    if (format != SDL_PIXELFORMAT_INDEX8){
-        printf("Error: GetForwardPassGrayScaleMatrix, the surface given has the %s surface type but only SDL_PIXELFORMAT_INDEX8 is supported\n", SDL_GetPixelFormatName(format));
-        SDL_FreeSurface(surface);
+    if (format != SDL_PIXELFORMAT_RGBA8888){
+        printf("Error: GetForwardPassGrayScaleMatrix, the surface given has the %s surface type but only SDL_PIXELFORMAT_RGBA8888 is supported\n", SDL_GetPixelFormatName(format));
         return NULL;
     }
 
     Uint8* pixels = surface->pixels; // cast the void*
-    SDL_Color* colorPalette = surface->format->palette->colors;
     struct Mat* grayScale = MatCreate(NETWORK_IMG_SIZE*NETWORK_IMG_SIZE, 1, NULL, NULL); // the matrix must be a column matrix for the network
 
     for(size_t y = 0; y < NETWORK_IMG_SIZE; y++){
         for(size_t x = 0; x < NETWORK_IMG_SIZE; x++){
-            Uint8 colorId = *(pixels + y * surface->pitch + x);
-            SDL_Color color = colorPalette[colorId];
-            grayScale->data[y*NETWORK_IMG_SIZE + x][0] =
-                0.299 * color.r/255 +
-                0.587 * color.g/255 +
-                0.114 * color.b/255;
+            Uint32 rawPixel = *(Uint32 *)(pixels + y * surface->pitch + x * 4);
+            Uint8 r, g, b, a;
+            SDL_GetRGBA(rawPixel, surface->format, &r, &g, &b, &a);
+            //SDL_Color color = colorPalette[colorId];
+            double grayCode = 0.299 * r/255 + 0.587 * g/255 + 0.114 * b/255;
+            grayScale->data[y*NETWORK_IMG_SIZE + x][0] = grayCode;
+            //printf("%.1f ", grayCode);
+            //printf("(%d,%d,%d)", r, g, b);
         }
+        //printf("\n");
     }
     return grayScale;
 }

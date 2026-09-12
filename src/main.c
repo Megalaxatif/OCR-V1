@@ -16,12 +16,11 @@ struct Network* network = NULL;
 struct Mat** answer10 = NULL;
 char*** files = NULL;
 int* digits = NULL;
-struct Mat** digitGrayScales = NULL;
-struct SDL_Rect** digitRects = NULL;
-SDL_Texture** digitTextures = NULL;
+char* sudokuPath = "/home/megalaxatif/Documents/code/OCR-V1/sudoku2.png";
 
+time_t seed = 14554;
 int main(){
-    srand(time(NULL)); // initialise the seed
+    srand(time(&seed)); // initialise the seed
     InitSDL();
 
     char** sample10 = malloc(10 * sizeof(char*));
@@ -43,71 +42,10 @@ int main(){
         errorCode = 3;
         goto cleanup;
     }
-    char* sudokuPath = "/home/megalaxatif/Documents/code/OCR-V1/sudoku2.png";
-    struct Mat* gridGrayScale = GetGridGrayScaleMatrix(sudokuPath);
-    size_t horizontalLineCount = 0;
-    SDL_Rect* horizontalLines = ScanHorizontalLines(gridGrayScale, &horizontalLineCount);
-    size_t horizontalBlockCount = 0;
-    SDL_Rect* horizontalBlocks = ConvertHorizontalLinesToBlocks(horizontalLines, horizontalLineCount, &horizontalBlockCount); // this function destroys horizontalLines
-
-    size_t verticalLineCount = 0;
-    SDL_Rect* verticalLines = ScanVerticalLines(gridGrayScale, &verticalLineCount);
-    size_t verticalBlockCount = 0;
-    SDL_Rect* verticalBlocks = ConvertVerticalLinesToBlocks(verticalLines, verticalLineCount, &verticalBlockCount); // this function destroys verticalLines
-
-    int ret = SortBlocks(&horizontalBlocks, &verticalBlocks, &horizontalBlockCount, &verticalBlockCount);
-    if (ret != 0){
-        printf("Error: main, SortBlocks returned %d\n", ret);
-        errorCode = 4;
-        goto cleanup;
-    }
-
-    digitRects = GetSudokuDigitRects(horizontalBlocks, verticalBlocks); // always return a 9 by 9 array
-    if (digitRects == NULL){
-        printf("Error: main, GetSudokuDigitRects returned NULL\n");
-        errorCode = 5;
-        goto cleanup;
-    }
-
-    digitTextures = GetSudokuDigitTextures(digitRects, sudokuPath);
-    if (digitTextures == NULL){
-        printf("Error: main, GetSudokuDigitTextures returned NULL\n");
-        errorCode = 6;
-        goto cleanup;
-    }
-
-    digitGrayScales = ConvertTexturesToGrayScale(digitTextures, 81);
-
-    if (digitGrayScales == NULL){
-        printf("Error: main, ConvertTexturesToGrayScale returned NULL\n");
-        errorCode = 6;
-        goto cleanup;
-    }
 
     SDL_Event event;
     int running = 1; // bool
     int trainingCycle = 0;
-
-    SDL_SetRenderDrawColor(renderer, 0,0,0,0);
-    SDL_SetRenderTarget(renderer, NULL);
-    SDL_RenderClear(renderer);
-
-    // render
-    // DrawGrayScale(gridGrayScale);
-    // DrawFilledRects(horizontalBlocks, horizontalBlockCount, gridGrayScale, (SDL_Color){255, 0, 0, 255});
-    // //DrawRects(verticalLines, verticalLineCount);
-    // //DrawRects(horizontalLines, horizontalLineCount);
-    // DrawFilledRects(verticalBlocks, verticalBlockCount, gridGrayScale, (SDL_Color){255, 0, 0, 255});
-    // for(int i = 0; i < 9; i++){
-    //     DrawRects(digitRects[i], 9, gridGrayScale, (SDL_Color){0, 225, 0, 255});
-    // }
-    // DrawDigitGrayScales(digitGrayScales, digitRects);
-    for(int k = 0; k < 9; k++){
-        for(int l = 0; l < 9; l++){
-            SDL_RenderCopy(renderer, digitTextures[k*9+l], NULL, digitRects[k] + l);
-        }
-    }
-    SDL_RenderPresent(renderer);
 
     while (running){
         while (SDL_PollEvent(&event)){
@@ -122,17 +60,47 @@ int main(){
         // train with the sample
         Train(network, sample10, 10, answer10);
         trainingCycle++;
-        if (trainingCycle == 150)
+        if (trainingCycle == 1500)
             running = 0;
     }
 
-    digits = SolveGrayScale(digitGrayScales, 81, network);
+    SDL_SetRenderDrawColor(renderer, 255,0,255,255); // debug
+    SDL_SetRenderTarget(renderer, NULL);// debug
+    SDL_RenderClear(renderer);// debug
+
+    digits = SolveSudoku(sudokuPath, network);
+
+    int digit0 = SolveImage("/home/megalaxatif/Documents/code/OCR-V1/database/train5/0/0255.png", network);
+    int digit1 = SolveImage("/home/megalaxatif/Documents/code/OCR-V1/database/train5/1/0255.png", network);
+    int digit2 = SolveImage("/home/megalaxatif/Documents/code/OCR-V1/database/train5/2/0255.png", network);
+    int digit3 = SolveImage("/home/megalaxatif/Documents/code/OCR-V1/database/train5/3/0255.png", network);
+    int digit4 = SolveImage("/home/megalaxatif/Documents/code/OCR-V1/database/train5/4/0255.png", network);
+    int digit5 = SolveImage("/home/megalaxatif/Documents/code/OCR-V1/database/train5/5/0255.png", network);
+    int digit6 = SolveImage("/home/megalaxatif/Documents/code/OCR-V1/database/train5/6/0255.png", network);
+    int digit7 = SolveImage("/home/megalaxatif/Documents/code/OCR-V1/database/train5/7/0255.png", network);
+    int digit8 = SolveImage("/home/megalaxatif/Documents/code/OCR-V1/database/train5/8/0255.png", network);
+    int digit9 = SolveImage("/home/megalaxatif/Documents/code/OCR-V1/database/train5/9/0255.png", network);
+
+    printf("0 : %d\n", digit0);
+    printf("1 : %d\n", digit1);
+    printf("2 : %d\n", digit2);
+    printf("3 : %d\n", digit3);
+    printf("4 : %d\n", digit4);
+    printf("5 : %d\n", digit5);
+    printf("6 : %d\n", digit6);
+    printf("7 : %d\n", digit7);
+    printf("8 : %d\n", digit8);
+    printf("9 : %d\n", digit9);
+
+
+
+    SDL_RenderPresent(renderer); // debug
+
     if (digits == NULL){
-        printf("Error: main, SolveGrayScale returned NULL\n");
-        errorCode = 6;
+        printf("Error: main, SolveSudoku returned NULL\n");
         goto cleanup;
     }
-    //print the array
+    //print digits
     printf("\n");
     for(int i = 0; i < 9; i++){
         for(int j = 0; j < 9; j++){
@@ -140,45 +108,17 @@ int main(){
         }
         printf("\n");
     }
-    while(1){
+    //free digits
+    free(digits);
+    running = 1;
+    while (running){
         while (SDL_PollEvent(&event)){
             if (event.type == SDL_QUIT)
-                break;
+                running = 0;
         }
     }
+    //---------------------
     cleanup:
-    MatDestroy(gridGrayScale);
-    if (digitGrayScales != NULL){
-        for (int i = 0; i < 81; i++){
-            MatDestroy(digitGrayScales[i]);
-        }
-        network->layers[0]->activation = NULL; // important
-    }
-    // clean network
-    DestroyNetwork(network);
-
-    free(horizontalLines);
-    free(horizontalBlocks);
-    free(verticalLines);
-    free(verticalBlocks);
-
-    // clean digits
-    free(digits);
-
-    // clean digitRects
-    if (digitRects != NULL){
-        for(int i = 0; i < 9; i++){
-            free(digitRects[i]);
-        }
-        free(digitRects);
-    }
-
-    // free digitTextures
-    if (digitTextures != NULL){
-        for (int i = 0; i < 81; i++)
-            SDL_DestroyTexture(digitTextures[i]);
-        free(digitTextures);
-    }
     // clean sample
     if (sample10 != NULL){
         for(int i = 0; i < 10; i++){
