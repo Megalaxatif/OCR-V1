@@ -120,33 +120,6 @@ int GetGuessedDigit(struct Network* network){
     }
     return biggestIndex; // the guessed digit corresponds to this index
 }
-int TMP(char* sample, struct Network *network){ // TODO: use solveImage instead, problem with matDestroy after forwardPass
-    SDL_Surface* trainingSurface = IMG_Load(sample);
-    if (trainingSurface == NULL){
-        printf("Error: Training, impossible to load the image at %s\n", sample);
-        return -4;
-    }
-    SDL_Surface *tmp = SDL_ConvertSurfaceFormat(trainingSurface, SDL_PIXELFORMAT_RGBA8888, 0);
-    SDL_FreeSurface(trainingSurface);
-    trainingSurface = tmp;
-
-
-    struct Mat* grayScale = GetForwardPassGrayScaleMatrix(trainingSurface);
-    SDL_FreeSurface(trainingSurface);
-    if (grayScale == NULL){
-        printf("Error: Train, GetForwardPassGrayScaleMatrix returned NULL\n");
-        return -4;
-    }
-
-    int errorCode = ForwardPass(network, grayScale);
-    if (errorCode != 0){
-        printf("Error: Train, ForwardPass returned %d\n", errorCode);
-        return errorCode;
-    }
-
-    int guessedDigit = GetGuessedDigit(network);
-    return guessedDigit;
-}
 
 int Train(struct Network* network, char** sample, size_t sampleSize, struct Mat* answer[]){
     if (sampleSize < 1||network == NULL || sample == NULL || answer == NULL){
@@ -168,7 +141,7 @@ int Train(struct Network* network, char** sample, size_t sampleSize, struct Mat*
 
     for(size_t k = 0; k < sampleSize; k++){
 
-        int guessedDigit = TMP(sample[k], network);
+        int guessedDigit = SolveImage(sample[k], network, 1);
         counter++;
         if (guessedDigit == k){
             correctCounter++;
@@ -329,22 +302,24 @@ int* SolveGrayScales(struct Mat** grayScales, size_t grayScaleCount, struct Netw
     }
     int* digits = malloc(grayScaleCount * sizeof(int));
     for(int i = 0; i < grayScaleCount; i++){
-        int errorCode = ForwardPass(network, grayScales[i]);
-        //MatDestroy(grayScales[i]);
-        //network->layers[0]->activation = NULL; // important
+        if (grayScales[i] == NULL)
+            digits[i] = -1;
+        else {
+            int errorCode = ForwardPass(network, grayScales[i]);
 
-        if (errorCode != 0){
-            printf("Error: SolveGrayScales, ForwardPass returned %d\n", errorCode);
-            free(digits);
-            return NULL;
+            if (errorCode != 0){
+                printf("Error: SolveGrayScales, ForwardPass returned %d\n", errorCode);
+                free(digits);
+                return NULL;
+            }
+            int guessedDigit = GetGuessedDigit(network);
+            digits[i] = guessedDigit;
         }
-        int guessedDigit = GetGuessedDigit(network);
-        digits[i] = guessedDigit;
     }
     return digits;
 }
 
-int SolveImage(char* path, struct Network* network){
+int SolveImage(char* path, struct Network* network, int isTraining){
     SDL_Surface* trainingSurface = IMG_Load(path);
     if (trainingSurface == NULL){
         printf("Error: SolveImage, impossible to load the image at %s\n", path);
@@ -367,7 +342,13 @@ int SolveImage(char* path, struct Network* network){
     }
 
     int errorCode = ForwardPass(network, grayScale);
-    MatDestroy(grayScale);
+
+    // the nework must not delete the first activation matrix if it's training because of backpropagation
+    if (!isTraining){
+        MatDestroy(grayScale);
+        network->layers[0]->activation = NULL;
+    }
+
     if (errorCode != 0){
         printf("Error: SolveImage, ForwardPass returned %d\n", errorCode);
         return -3;
@@ -432,6 +413,7 @@ int* SolveSudoku(char* sudokuPath, struct Network* network){
         printf("Error: SolveSudoku, ConvertTexturesToGrayScale returned NULL\n");
         goto cleanup;
     }
+    digitGrayScales = DeleteBlankGrayScales(digitGrayScales, 81);
     // for(int i = 0; i < 81; i++){
     //     struct Mat* tmp = InvertForwardPassGrayScaleMatrix(digitGrayScales[i]);
     //      DrawDigitGrayScales(&tmp, digitRects + i, 1, gridGrayScale);

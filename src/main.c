@@ -70,16 +70,16 @@ int main(){
 
     digits = SolveSudoku(sudokuPath, network);
 
-    int digit0 = SolveImage("/home/megalaxatif/Documents/code/OCR-V1/database/train5/0/0255.png", network);
-    int digit1 = SolveImage("/home/megalaxatif/Documents/code/OCR-V1/database/train5/1/0255.png", network);
-    int digit2 = SolveImage("/home/megalaxatif/Documents/code/OCR-V1/database/train5/2/0255.png", network);
-    int digit3 = SolveImage("/home/megalaxatif/Documents/code/OCR-V1/database/train5/3/0255.png", network);
-    int digit4 = SolveImage("/home/megalaxatif/Documents/code/OCR-V1/database/train5/4/0255.png", network);
-    int digit5 = SolveImage("/home/megalaxatif/Documents/code/OCR-V1/database/train5/5/0255.png", network);
-    int digit6 = SolveImage("/home/megalaxatif/Documents/code/OCR-V1/database/train5/6/0255.png", network);
-    int digit7 = SolveImage("/home/megalaxatif/Documents/code/OCR-V1/database/train5/7/0255.png", network);
-    int digit8 = SolveImage("/home/megalaxatif/Documents/code/OCR-V1/database/train5/8/0255.png", network);
-    int digit9 = SolveImage("/home/megalaxatif/Documents/code/OCR-V1/database/train5/9/0255.png", network);
+    int digit0 = SolveImage("/home/megalaxatif/Documents/code/OCR-V1/database/train5/0/0255.png", network,0);
+    int digit1 = SolveImage("/home/megalaxatif/Documents/code/OCR-V1/database/train5/1/0255.png", network,0);
+    int digit2 = SolveImage("/home/megalaxatif/Documents/code/OCR-V1/database/train5/2/0255.png", network,0);
+    int digit3 = SolveImage("/home/megalaxatif/Documents/code/OCR-V1/database/train5/3/0255.png", network,0);
+    int digit4 = SolveImage("/home/megalaxatif/Documents/code/OCR-V1/database/train5/4/0255.png", network,0);
+    int digit5 = SolveImage("/home/megalaxatif/Documents/code/OCR-V1/database/train5/5/0255.png", network,0);
+    int digit6 = SolveImage("/home/megalaxatif/Documents/code/OCR-V1/database/train5/6/0255.png", network,0);
+    int digit7 = SolveImage("/home/megalaxatif/Documents/code/OCR-V1/database/train5/7/0255.png", network,0);
+    int digit8 = SolveImage("/home/megalaxatif/Documents/code/OCR-V1/database/train5/8/0255.png", network,0);
+    int digit9 = SolveImage("/home/megalaxatif/Documents/code/OCR-V1/database/train5/9/0255.png", network,0);
 
     printf("0 : %d\n", digit0);
     printf("1 : %d\n", digit1);
@@ -104,7 +104,8 @@ int main(){
     printf("\n");
     for(int i = 0; i < 9; i++){
         for(int j = 0; j < 9; j++){
-            printf("%d ", digits[i*9+j]);
+            int currentDigit = digits[i*9+j];
+            currentDigit > 0 ? printf("%d ", currentDigit) : printf("  ");
         }
         printf("\n");
     }

@@ -647,3 +647,29 @@ struct Mat* GetForwardPassGrayScaleMatrix(SDL_Surface* surface){
     }
     return grayScale;
 }
+
+struct Mat** DeleteBlankGrayScales(struct Mat** grayScales, size_t grayScaleCount){
+    if (grayScales == NULL || grayScaleCount <= 0){
+        printf("Error: DeleteBlankGrayScales, invalid argument \n");
+        return grayScales;
+    }
+    for(size_t i = 0; i < grayScaleCount; i++){
+        struct Mat* currentGrayScale = grayScales[i];
+        double blankPixelCount = 0;
+        for(size_t y = 0; y < currentGrayScale->row; y++){
+            for(size_t x = 0; x < currentGrayScale->col; x++){
+                double currentGrayCode =  currentGrayScale->data[y][x];
+                if (currentGrayCode >= MATRIX_VALUE_BLANKNESS_THRESHOLD){
+                    blankPixelCount ++;
+                }
+            }
+        }
+        double pixelCount = currentGrayScale->row * currentGrayScale->col;
+        double ratio = blankPixelCount / pixelCount;
+        if (ratio >= MATRIX_BLANKNESS_THRESHOLD){
+            MatDestroy(currentGrayScale);
+            grayScales[i] = NULL;
+        }
+    }
+    return grayScales;
+}

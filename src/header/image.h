@@ -25,3 +25,4 @@ int DrawDigitGrayScales(struct Mat** digitGrayScales, SDL_Rect* rects, size_t re
 struct Mat* GetGridGrayScaleMatrix(char* imgFileName);// loads the given image and returns a matrix of its grayscale
 // does the exact same as GetGrayScaleMatrix but stores the result in a column matrix so that it can be used for the network
 struct Mat* GetForwardPassGrayScaleMatrix(SDL_Surface* trainingSurface);
+struct Mat** DeleteBlankGrayScales(struct Mat** grayScales, size_t grayScaleCount);
