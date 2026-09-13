@@ -3,6 +3,7 @@
 #include <SDL2/SDL_image.h>
 #include <SDL2/SDL_ttf.h>
 #include <SDL2/SDL2_gfxPrimitives.h>
+#include "../../lib/Nuklear/nuklear.h"
 
 #define SCREEN_W 1000
 #define SCREEN_H 1000

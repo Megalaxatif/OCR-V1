@@ -74,7 +74,7 @@ int ComputeActivation(struct Layer* layer, struct Layer* nextLayer){ // calculat
 
     struct Mat* activation = NULL;
 
-    if (nextLayer->biases->row == nextLayer->biases->col == 1){ // nextlayer is the last layer
+    if (nextLayer->biases->row == 1 && nextLayer->biases->col == 1){ // nextlayer is the last layer
         activation = MatCreate(preActivation->row, 1, NULL, NULL);
         Softmax(preActivation, activation);
     }
@@ -91,11 +91,11 @@ int ComputeActivation(struct Layer* layer, struct Layer* nextLayer){ // calculat
 int ForwardPass(struct Network* network, struct Mat* input){
     input = InvertForwardPassGrayScaleMatrix(input); // needed if we are using black on white training images
     network->layers[0]->activation = input;
-    int i = 0;
+    size_t i = 0;
     while(i < network->layerCount - 1){
         int errorCode = ComputeActivation(network->layers[i], network->layers[i+1]);
         if (errorCode != 0){
-            printf("Error: ForwardPass, ComputeActivation between layer %d and %d failed and returned %d\n", i, i+1, errorCode);
+            printf("Error: ForwardPass, ComputeActivation between layer %ld and %ld failed and returned %d\n", i, i+1, errorCode);
             return 1;
         }
         i++;
@@ -111,7 +111,7 @@ int GetGuessedDigit(struct Network* network){
     struct Mat* lastLayerActivation = network->layers[network->layerCount - 1]->activation;
     double biggest = lastLayerActivation->data[0][0];
     int biggestIndex = 0;
-    for(int j = 1; j < lastLayerActivation->row; j++){
+    for(size_t j = 1; j < lastLayerActivation->row; j++){
         double n = lastLayerActivation->data[j][0];
         if (n > biggest){
             biggest = n;
@@ -142,8 +142,12 @@ int Train(struct Network* network, char** sample, size_t sampleSize, struct Mat*
     for(size_t k = 0; k < sampleSize; k++){
 
         int guessedDigit = SolveImage(sample[k], network, 1);
+        if (guessedDigit < 0){
+            errorCode = 4;
+            goto clear;
+        }
         counter++;
-        if (guessedDigit == k){
+        if ((size_t)guessedDigit == k){
             correctCounter++;
             printf("hit  | ");
         }
@@ -267,7 +271,7 @@ struct Network* CreateNetwork(double learningRate, size_t layerCount, int* neuro
 
 void DestroyNetwork(struct Network* network){
     if (network == NULL) return;
-    for(int i = 0; i < network->layerCount; i++){
+    for(size_t i = 0; i < network->layerCount; i++){
         DestroyLayer(network->layers[i]);
     }
     free(network->layers);
@@ -279,7 +283,7 @@ void PrintDigitGrayScales(struct Mat** digitGrayScale, size_t grayScaleCount){
         printf("Error: MatPrint, matrix pointer is NULL\n");
         return;
     }
-    for(int i = 0; i < grayScaleCount; i++){
+    for(size_t i = 0; i < grayScaleCount; i++){
         struct Mat* currentGrayScale = digitGrayScale[i];
         if (currentGrayScale->col != 1 || currentGrayScale->row != NETWORK_IMG_SIZE*NETWORK_IMG_SIZE){
             printf("Error: PrintDigitGrayScale, the matrix given doesn't have valid dimensions for a digit grayscale");
@@ -301,7 +305,7 @@ int* SolveGrayScales(struct Mat** grayScales, size_t grayScaleCount, struct Netw
         return NULL;
     }
     int* digits = malloc(grayScaleCount * sizeof(int));
-    for(int i = 0; i < grayScaleCount; i++){
+    for(size_t i = 0; i < grayScaleCount; i++){
         if (grayScales[i] == NULL)
             digits[i] = -1;
         else {

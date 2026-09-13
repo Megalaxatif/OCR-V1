@@ -1,5 +1,7 @@
 database/*
 *.out
+program
 *.exe
 build/
+obj/
 .vscode/

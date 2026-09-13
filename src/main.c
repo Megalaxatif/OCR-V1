@@ -9,6 +9,10 @@
 #include <time.h>
 #include <stdlib.h>
 
+// include nuklear
+#define NK_IMPLEMENTATION
+#include "../lib/Nuklear/nuklear.h"
+
 int errorCode = 0;
 size_t* fileCount = NULL; // fileCount[i] correspond to the number of elements in files[i]
 int neuronsPerLayer[] = {NETWORK_IMG_SIZE*NETWORK_IMG_SIZE, 256, 128, 10};

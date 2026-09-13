@@ -1,12 +1,12 @@
 #include "header/image.h"
 #include "header/math.h"
 #include "header/init.h"
-#include "header/neurons.h"
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
 #include <SDL2/SDL_pixels.h>
 #include <SDL2/SDL_rect.h>
 #include <SDL2/SDL_render.h>
+#include <SDL2/SDL_stdinc.h>
 #include <SDL2/SDL_surface.h>
 #include <stdalign.h>
 
@@ -15,8 +15,8 @@ struct Mat* InvertForwardPassGrayScaleMatrix(struct Mat* grayScale){
         printf("Error: InvertForwardPassGrayScaleMatrix, invalid argument");
         return NULL;
     }
-    for(int i = 0; i < grayScale->row; i++){
-        for(int j = 0; j < grayScale->col; j++){
+    for(size_t i = 0; i < grayScale->row; i++){
+        for(size_t j = 0; j < grayScale->col; j++){
             grayScale->data[i][j] = 1 - grayScale->data[i][j];
         }
     }
@@ -40,7 +40,7 @@ int DrawRects(SDL_Rect* rects, size_t rectCount, struct Mat* referenceMatrix, SD
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
     SDL_RenderClear(renderer);
 
-    for(int i = 0; i < rectCount; i++ ){
+    for(size_t i = 0; i < rectCount; i++ ){
         SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, color.a);
         SDL_RenderDrawRect(renderer, rects+i);
     }
@@ -68,7 +68,7 @@ int DrawFilledRects(SDL_Rect* rects, size_t rectCount, struct Mat* referenceMatr
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
     SDL_RenderClear(renderer);
 
-    for(int i = 0; i < rectCount; i++ ){
+    for(size_t i = 0; i < rectCount; i++ ){
         SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, color.a);
         SDL_RenderFillRect(renderer, rects+i);
     }
@@ -96,7 +96,7 @@ int DrawDigitGrayScales(struct Mat** digitGrayScales, SDL_Rect* rects, size_t re
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
     SDL_RenderClear(renderer);
 
-    for(int i = 0; i < rectCount; i++){
+    for(size_t i = 0; i < rectCount; i++){
         struct Mat* currentGrayScale = digitGrayScales[i];
         //MatPrint(currentGrayScale);
         SDL_Rect currentRect = rects[i];
@@ -171,7 +171,7 @@ SDL_Rect* ScanVerticalLines(struct Mat* grayScale, size_t* lineCount_){
                     currentLine.h++;
                 else {
                     int isHole = 0;
-                    int i = 1;
+                    size_t i = 1;
                     while(y+i < grayScale->row && i < grayScale->row/100){  // NOTE: adjust this value if necessary
                         if (grayScale->data[y+i][x] == 0){
                             y += i;
@@ -182,7 +182,7 @@ SDL_Rect* ScanVerticalLines(struct Mat* grayScale, size_t* lineCount_){
                         i++;
                     }
                     if (!isHole) { // end of the line
-                        if (currentLine.h > grayScale->row/10){ // ignore little lines
+                        if ((size_t)currentLine.h > grayScale->row/10){ // ignore little lines
                             // TODO: remove that and use a point buffer instead (use one similar to minimake)
                             lines[lineCount] = currentLine;
                             lineCount++;
@@ -241,8 +241,8 @@ SDL_Rect* ConvertVerticalLinesToBlocks(SDL_Rect* lines, size_t lineCount, size_t
         }
         else{
             int delta = 0.05*prevLine.h;
-            int adjacentLineFound = 0;
-            int j = i+1; // all the lines before i are above so no need to check them
+            size_t adjacentLineFound = 0;
+            size_t j = i+1; // all the lines before i are above so no need to check them
             while(!adjacentLineFound && j < lineCount){
                 adjacentLine = lines[j];
                 if (adjacentLine.x == 0 && adjacentLine.y == 0 && adjacentLine.w == 0 && adjacentLine.h == 0) {
@@ -312,7 +312,7 @@ SDL_Rect* ScanHorizontalLines(struct Mat* grayScale, size_t* lineCount_){
                     currentLine.w++;
                 else {
                     int isHole = 0;
-                    int i = 1;
+                    size_t i = 1;
                     while(x+i < grayScale->col && i < grayScale->col/100){  // NOTE: adjust this value if necessary
                         if (grayScale->data[y][x+i] == 0){
                             x += i;
@@ -323,7 +323,7 @@ SDL_Rect* ScanHorizontalLines(struct Mat* grayScale, size_t* lineCount_){
                         i++;
                     }
                     if (!isHole) { // end of the line
-                        if (currentLine.w > grayScale->col/10){ // ignore little lines
+                        if ((size_t)currentLine.w > grayScale->col/10){ // ignore little lines
                             // TODO: remove that and use a point buffer instead (use one similar to minimake)
                             lines[lineCount] = currentLine;
                             lineCount++;
@@ -382,8 +382,8 @@ SDL_Rect* ConvertHorizontalLinesToBlocks(SDL_Rect* lines, size_t lineCount, size
         }
         else{
             int delta = 0.05*prevLine.w;
-            int adjacentLineFound = 0;
-            int j = i+1; // all the lines before i are above so no need to check them
+            size_t adjacentLineFound = 0;
+            size_t j = i+1; // all the lines before i are above so no need to check them
             while(!adjacentLineFound && j < lineCount){
                 adjacentLine = lines[j];
                 if (adjacentLine.x == 0 && adjacentLine.y == 0 && adjacentLine.w == 0 && adjacentLine.h == 0) {
@@ -505,7 +505,7 @@ struct Mat** ConvertTexturesToGrayScale(SDL_Texture** textures, size_t textureCo
     struct Mat** grayScales = malloc(textureCount * sizeof(struct Mat*));
     SDL_Surface* rgbaSurface = SDL_CreateRGBSurfaceWithFormat( 0, NETWORK_IMG_SIZE, NETWORK_IMG_SIZE, 32, SDL_PIXELFORMAT_RGBA8888);
 
-    for(int i = 0; i < textureCount; i++){
+    for(size_t i = 0; i < textureCount; i++){
         SDL_SetRenderTarget(renderer, textures[i]);
         SDL_RenderReadPixels(renderer, NULL, SDL_PIXELFORMAT_RGBA8888, rgbaSurface->pixels, rgbaSurface->pitch);
 
@@ -514,7 +514,7 @@ struct Mat** ConvertTexturesToGrayScale(SDL_Texture** textures, size_t textureCo
 
         if (grayScales[i] == NULL){
             printf("Error: ConvertTexturesToGrayScale, GetForwardPassGrayScaleMatrix returned NULL\n");
-            for(int j = 0; j < i; j++){
+            for(size_t j = 0; j < i; j++){
                 MatDestroy(grayScales[j]);
             }
             free(grayScales);
@@ -584,9 +584,9 @@ struct Mat* GetGridGrayScaleMatrix(char* imgFileName){
     if (format == SDL_PIXELFORMAT_INDEX8){
         SDL_Color* colorPalette = surface->format->palette->colors;
 
-        for(size_t y = 0; y < surface->h; y++){
-            for(size_t x = 0; x < surface->w; x++){
-                Uint8 colorId = *(pixels + y * surface->pitch + x);
+        for(int y = 0; y < surface->h; y++){
+            for(int x = 0; x < surface->w; x++){
+                Uint8 colorId = *(Uint8*)(pixels + y * surface->pitch + x);
                 SDL_Color color = colorPalette[colorId];
                 double grayCode =
                     0.299 * color.r/255 +
@@ -598,8 +598,8 @@ struct Mat* GetGridGrayScaleMatrix(char* imgFileName){
         }
     }
     else if (format == SDL_PIXELFORMAT_RGB24){
-        for(size_t y = 0; y < surface->h; y++){
-            for(size_t x = 0; x < surface->w; x++){
+        for(int y = 0; y < surface->h; y++){
+            for(int x = 0; x < surface->w; x++){
                 Uint8* pixel = pixels + y * surface->pitch + x*3;
                 double grayCode = // TODO: use GetRGBA here
                     0.299 * pixel[0]/255 +
