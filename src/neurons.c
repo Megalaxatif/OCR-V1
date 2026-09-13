@@ -469,3 +469,11 @@ int* SolveSudoku(char* sudokuPath, struct Network* network){
 
     return digits;
 }
+
+struct Network* LoadNetwork(char* path){
+    return 0; // TODO
+}
+
+int SaveNetwork(struct Network* network, char* path){
+    return 0; // TODO
+}

@@ -28,3 +28,5 @@ void PrintDigitGrayScales(struct Mat** digitGrayScale, size_t grayScaleCount);
 int* SolveGrayScales(struct Mat** grayScales, size_t grayScaleCount, struct Network* network);
 int* SolveSudoku(char* sudokuPath, struct Network*);
 int SolveImage(char* path, struct Network* network, int isTraining);
+struct Network* LoadNetwork(char* path);
+int SaveNetwork(struct Network* network, char* path);
