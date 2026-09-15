@@ -82,7 +82,7 @@ struct Mat* MatCreate(size_t row, size_t col, double* data[], void (*f)(struct M
     newMat->row = row;
     newMat->col = col;
 
-    for(int i = 0; i < row; i++){
+    for(size_t i = 0; i < row; i++){
         newMat->data[i] = malloc(col*sizeof(double));
     }
 
@@ -261,7 +261,7 @@ struct Mat* MatMult(struct Mat* mat_1, struct Mat* mat_2){
     for(size_t j = 0; j < mat_2->col; j++){
         for(size_t i = 0; i < mat_1->row; i++){
             double tmp = 0;
-            for(int k = 0; k < mat_2->row; k++){
+            for(size_t k = 0; k < mat_2->row; k++){
                 tmp += mat_1->data[i][k] * mat_2->data[k][j];
             }
             res->data[i][j] = tmp;

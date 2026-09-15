@@ -1,3 +1,6 @@
+#define NK_IMPLEMENTATION
+#define NK_SDL_RENDERER_IMPLEMENTATION
+
 #include "header/init.h"
 #include <stdio.h>
 // int InitImGui(){

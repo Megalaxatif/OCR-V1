@@ -96,3 +96,27 @@ char** GetFileNames(char* dirPath, size_t* _fileCount){
     closedir(dir);
     return files;
 }
+
+int SaveMatrix(struct Mat* mat, char* path){
+    printf("saving matrix\n");
+    if (mat == NULL || path == NULL){
+        printf("Error: SaveMatrix, invalidArgument\n");
+        return 1;
+    }
+    FILE* file = fopen(path, "a");
+    if (file == NULL){
+        printf("Error: SaveMatrix, impossible to open the file %s\n", path);
+        return 2;
+    }
+    fprintf(file, "matrix:{\n\trow:%ld\n\tcol:%ld\n\tdata:{\n\t\t", mat->row, mat->col);
+    for(size_t y = 0; y < mat->row; y++){
+        for(size_t x = 0; x < mat->col; x++){
+            fprintf(file, "%fd", mat->data[y][x]);
+            if(!(y + 1 == mat->row && x + 1 == mat->col))
+                fprintf(file, ",");
+        }
+        y + 1 == mat->row ? fprintf(file, "\n\t}\n}\n") : fprintf(file, "\n\t\t");
+    }
+    fclose(file);
+    return 0;
+}

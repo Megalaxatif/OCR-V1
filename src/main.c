@@ -9,11 +9,8 @@
 #include <time.h>
 #include <stdlib.h>
 
-// include nuklear
-#define NK_IMPLEMENTATION
-#include "../lib/Nuklear/nuklear.h"
-
 int errorCode = 0;
+int targetTrainingCycle = 15;
 size_t* fileCount = NULL; // fileCount[i] correspond to the number of elements in files[i]
 int neuronsPerLayer[] = {NETWORK_IMG_SIZE*NETWORK_IMG_SIZE, 256, 128, 10};
 struct Network* network = NULL;
@@ -26,6 +23,13 @@ time_t seed = 14554;
 int main(){
     srand(time(&seed)); // initialise the seed
     InitSDL();
+    // nuklear
+    struct nk_context *ctx = nk_sdl_init(window, renderer);
+    struct nk_font_atlas *atlas;
+
+    nk_sdl_font_stash_begin(&atlas);
+    nk_sdl_font_stash_end();
+    //------
 
     char** sample10 = malloc(10 * sizeof(char*));
     for(int i = 0; i < 10; i++){
@@ -49,79 +53,81 @@ int main(){
 
     SDL_Event event;
     int running = 1; // bool
-    int trainingCycle = 0;
 
     while (running){
+        nk_input_begin(ctx);
         while (SDL_PollEvent(&event)){
             if (event.type == SDL_QUIT)
                 running = 0;
+            nk_sdl_handle_event(&event);
         }
-        errorCode = GetSample10(&sample10, files, fileCount);
-        if (errorCode != 0){
-            printf("Error: main, GetSample10 returned %d\n", errorCode);
-            goto cleanup;
+        nk_input_end(ctx);
+
+        // nuklear
+        if (nk_begin(
+                ctx,
+                "Fenetre",
+                nk_rect(50, 50, 300, 200),
+                NK_WINDOW_BORDER |
+                NK_WINDOW_MOVABLE |
+                NK_WINDOW_TITLE))
+        {
+            nk_layout_row_dynamic(ctx, 30, 1);
+
+            nk_label(ctx, "Salut Nuklear", NK_TEXT_LEFT);
+
+            if (nk_button_label(ctx, "solve sudoku")){
+                digits = SolveSudoku(sudokuPath, network);
+                if (digits == NULL){
+                    printf("Error: main, SolveSudoku returned NULL\n");
+                    goto cleanup;
+                }
+                //print digits
+                printf("\n");
+                for(int i = 0; i < 9; i++){
+                    for(int j = 0; j < 9; j++){
+                        int currentDigit = digits[i*9+j];
+                        currentDigit > 0 ? printf("%d ", currentDigit) : printf("  ");
+                    }
+                    printf("\n");
+                }
+                //free digits
+                free(digits);
+            }
+            if (nk_button_label(ctx, "train")){
+                int trainingCycle = 0;
+                while (trainingCycle < targetTrainingCycle){
+                    errorCode = GetSample10(&sample10, files, fileCount);
+                    if (errorCode != 0){
+                        printf("Error: main, GetSample10 returned %d\n", errorCode);
+                        goto cleanup;
+                    }
+                    // train with the sample
+                    Train(network, sample10, 10, answer10);
+                    trainingCycle++;
+                }
+            }
+            if (nk_button_label(ctx, "save")){
+                //printf("save\n");
+                //SaveMatrix(network->layers[1]->activation, "save.ocr");
+                struct Mat* test = MatCreate(5, 5, NULL, InitWeights);
+                SaveMatrix(test, "save.ocr");
+                MatDestroy(test);
+            }
+            if (nk_button_label(ctx, "load")){
+                printf("load\n");
+            }
         }
-        // train with the sample
-        Train(network, sample10, 10, answer10);
-        trainingCycle++;
-        if (trainingCycle == 1500)
-            running = 0;
+        nk_end(ctx);
+
+        SDL_SetRenderDrawColor(renderer, 30, 30, 30, 255);
+        SDL_RenderClear(renderer);
+
+        nk_sdl_render(NK_ANTI_ALIASING_ON);
+
+        SDL_RenderPresent(renderer);
     }
 
-    SDL_SetRenderDrawColor(renderer, 255,0,255,255); // debug
-    SDL_SetRenderTarget(renderer, NULL);// debug
-    SDL_RenderClear(renderer);// debug
-
-    digits = SolveSudoku(sudokuPath, network);
-
-    int digit0 = SolveImage("/home/megalaxatif/Documents/code/OCR-V1/database/train5/0/0255.png", network,0);
-    int digit1 = SolveImage("/home/megalaxatif/Documents/code/OCR-V1/database/train5/1/0255.png", network,0);
-    int digit2 = SolveImage("/home/megalaxatif/Documents/code/OCR-V1/database/train5/2/0255.png", network,0);
-    int digit3 = SolveImage("/home/megalaxatif/Documents/code/OCR-V1/database/train5/3/0255.png", network,0);
-    int digit4 = SolveImage("/home/megalaxatif/Documents/code/OCR-V1/database/train5/4/0255.png", network,0);
-    int digit5 = SolveImage("/home/megalaxatif/Documents/code/OCR-V1/database/train5/5/0255.png", network,0);
-    int digit6 = SolveImage("/home/megalaxatif/Documents/code/OCR-V1/database/train5/6/0255.png", network,0);
-    int digit7 = SolveImage("/home/megalaxatif/Documents/code/OCR-V1/database/train5/7/0255.png", network,0);
-    int digit8 = SolveImage("/home/megalaxatif/Documents/code/OCR-V1/database/train5/8/0255.png", network,0);
-    int digit9 = SolveImage("/home/megalaxatif/Documents/code/OCR-V1/database/train5/9/0255.png", network,0);
-
-    printf("0 : %d\n", digit0);
-    printf("1 : %d\n", digit1);
-    printf("2 : %d\n", digit2);
-    printf("3 : %d\n", digit3);
-    printf("4 : %d\n", digit4);
-    printf("5 : %d\n", digit5);
-    printf("6 : %d\n", digit6);
-    printf("7 : %d\n", digit7);
-    printf("8 : %d\n", digit8);
-    printf("9 : %d\n", digit9);
-
-
-
-    SDL_RenderPresent(renderer); // debug
-
-    if (digits == NULL){
-        printf("Error: main, SolveSudoku returned NULL\n");
-        goto cleanup;
-    }
-    //print digits
-    printf("\n");
-    for(int i = 0; i < 9; i++){
-        for(int j = 0; j < 9; j++){
-            int currentDigit = digits[i*9+j];
-            currentDigit > 0 ? printf("%d ", currentDigit) : printf("  ");
-        }
-        printf("\n");
-    }
-    //free digits
-    free(digits);
-    running = 1;
-    while (running){
-        while (SDL_PollEvent(&event)){
-            if (event.type == SDL_QUIT)
-                running = 0;
-        }
-    }
     //---------------------
     cleanup:
     // clean sample
@@ -158,6 +164,9 @@ int main(){
 
     // clean sdl
     DestroySDL();
+
+    // clean nuklear
+    nk_sdl_shutdown();
 
     //printf("matCount : %ld\n", matCount);
     printf("return code: %d\n", errorCode);

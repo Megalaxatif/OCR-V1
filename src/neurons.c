@@ -429,7 +429,7 @@ int* SolveSudoku(char* sudokuPath, struct Network* network){
     // SDL_SetRenderTarget(renderer, NULL);
     // SDL_RenderCopy(renderer, texture, NULL, NULL);
     // SDL_DestroyTexture(texture);
-    DrawDigitGrayScales(digitGrayScales, digitRects, 81, gridGrayScale);
+    //DrawDigitGrayScales(digitGrayScales, digitRects, 81, gridGrayScale);
     //DrawRects(digitRects, 81, gridGrayScale, (SDL_Color){0,255,0,255});
 
     digits = SolveGrayScales(digitGrayScales, 81, network);
@@ -475,5 +475,6 @@ struct Network* LoadNetwork(char* path){
 }
 
 int SaveNetwork(struct Network* network, char* path){
-    return 0; // TODO
+    FILE* file = fopen(path, "w");
+
 }
