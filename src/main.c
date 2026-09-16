@@ -115,7 +115,14 @@ int main(){
                 MatDestroy(test);
             }
             if (nk_button_label(ctx, "load")){
-                printf("load\n");
+                //printf("load\n");
+                FILE* file = fopen("save.ocr", "r");
+                if (file == NULL){
+                    printf("Error: main, impossible to load the ocr, file is NULL\n"); // TODO change
+                }
+                LoadMatrix(file);
+                fclose(file);
+
             }
         }
         nk_end(ctx);

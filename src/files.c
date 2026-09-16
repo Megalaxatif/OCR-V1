@@ -111,12 +111,68 @@ int SaveMatrix(struct Mat* mat, char* path){
     fprintf(file, "matrix:{\n\trow:%ld\n\tcol:%ld\n\tdata:{\n\t\t", mat->row, mat->col);
     for(size_t y = 0; y < mat->row; y++){
         for(size_t x = 0; x < mat->col; x++){
-            fprintf(file, "%fd", mat->data[y][x]);
-            if(!(y + 1 == mat->row && x + 1 == mat->col))
-                fprintf(file, ",");
+            fprintf(file, "%.17f;", mat->data[y][x]);
         }
         y + 1 == mat->row ? fprintf(file, "\n\t}\n}\n") : fprintf(file, "\n\t\t");
     }
     fclose(file);
     return 0;
+}
+
+struct Mat* LoadMatrix(FILE* file){
+    printf("loading matrix\n");
+    if (file == NULL){
+        printf("Error: LoadMatrix, invalidArgument\n");
+        return NULL;
+    }
+    struct Mat* ret = NULL;
+    char* lineBuffer = NULL;
+    size_t lineBufferSize = 0;
+    int matrixFound = 0;
+
+    while(getline(&lineBuffer, &lineBufferSize, file) && !matrixFound){
+        if (strstr(lineBuffer, "matrix"))
+            matrixFound = 1;
+    }
+
+    if (matrixFound){
+        size_t row = 0;
+        size_t col = 0;
+        char* cursor = NULL;
+        // row
+        if (!getline(&lineBuffer, &lineBufferSize, file)){
+            printf("Error: LoadMatrix, the matrix is cut in half before the row argument\n");
+            goto cleanup;
+        }
+        if ((cursor = strstr(lineBuffer, "row:")) == NULL){
+            printf("Error: LoadMatrix, the matrix doesn't have a row argument\n");
+            goto cleanup;
+        }
+        if (sscanf(cursor, "row:%ld", &row) != 1){
+            printf("Error: LoadMatrix, the row argument is empty or invalid\n");
+            goto cleanup;
+        }
+        // col
+        if (!getline(&lineBuffer, &lineBufferSize, file)){
+            printf("Error: LoadMatrix, the matrix is cut in half before the col argument\n");
+            goto cleanup;
+        }
+        if (!(cursor = strstr(lineBuffer, "col:"))){
+            printf("Error: LoadMatrix, the matrix doesn't have a col argument\n");
+            goto cleanup;
+        }
+        if (sscanf(cursor, "col:%ld", &col) != 1){
+            printf("Error: LoadMatrix, the col argument is empty or invalid\n");
+            goto cleanup;
+        }
+        printf("row: %ld, col: %ld\n", row, col);
+    }
+    else {
+        printf("WARNING: LoadMatrix, no more matrices found in the file\n");
+        goto cleanup;
+    }
+
+    cleanup:
+    free(lineBuffer);
+    return NULL;
 }
