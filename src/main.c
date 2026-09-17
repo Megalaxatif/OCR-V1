@@ -119,6 +119,7 @@ int main(){
                 FILE* file = fopen("save.ocr", "r");
                 if (file == NULL){
                     printf("Error: main, impossible to load the ocr, file is NULL\n"); // TODO change
+                    goto cleanup;
                 }
                 LoadMatrix(file);
                 fclose(file);

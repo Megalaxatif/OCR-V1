@@ -5,7 +5,7 @@
 #include <dirent.h>
 #include <stdlib.h>
 #include <string.h>
-
+#include <stdlib.h>
 int GetSample10(char*** sample, char*** files, size_t* fileCount){
     if (sample == NULL || files == NULL || fileCount == NULL){
         printf("Error: GetSample10, invalid argument\n");
@@ -125,30 +125,29 @@ struct Mat* LoadMatrix(FILE* file){
         printf("Error: LoadMatrix, invalidArgument\n");
         return NULL;
     }
+    double** data = NULL;
     struct Mat* ret = NULL;
     char* lineBuffer = NULL;
     size_t lineBufferSize = 0;
     int matrixFound = 0;
 
-    while(getline(&lineBuffer, &lineBufferSize, file) != EOF && !matrixFound){
+    size_t row = 0;
+    size_t col = 0;
+    char* cursor = NULL;
+
+    while(!matrixFound && getline(&lineBuffer, &lineBufferSize, file) != EOF){
         //printf("line: %s", lineBuffer);
         if (strstr(lineBuffer, "matrix")){
             matrixFound = 1;
         }
     }
-    printf("line 1: %s", lineBuffer);
 
     if (matrixFound){
-        size_t row = 0;
-        size_t col = 0;
-        char* cursor = NULL;
         // row
-        printf("line 2 : %s", lineBuffer);
         if (getline(&lineBuffer, &lineBufferSize, file) == EOF){
             printf("Error: LoadMatrix, the matrix is cut in half before the row argument\n");
             goto cleanup;
         }
-        printf("line 3: %s", lineBuffer);
         if ((cursor = strstr(lineBuffer, "row:")) == NULL){
             printf("Error: LoadMatrix, the matrix doesn't have a row argument\n");
             goto cleanup;
@@ -170,7 +169,42 @@ struct Mat* LoadMatrix(FILE* file){
             printf("Error: LoadMatrix, the col argument is empty or invalid\n");
             goto cleanup;
         }
-        printf("row: %ld, col: %ld\n", row, col);
+
+        // data
+        if (!getline(&lineBuffer, &lineBufferSize, file)){
+            printf("Error: LoadMatrix, the matrix is cut in half before the data argument\n");
+            goto cleanup;
+        }
+        if (strstr(lineBuffer, "data:{") == NULL){
+            printf("Error: LoadMatrix, the matrix doesn't have a data argument\n");
+            goto cleanup;
+        }
+
+        // init the data array with the column and row number we found before
+        data = malloc(row*sizeof(double*));
+        for (size_t i = 0; i < row; i++)
+            data[i] = malloc(col * sizeof(double));
+
+        for (size_t y = 0; y < row; y++){
+            if (!getline(&lineBuffer, &lineBufferSize, file)){
+                printf("Error: LoadMatrix, impossible to find the %ld row\n", y);
+                goto cleanup;
+            }
+            char* lineWithoutTab = lineBuffer;
+            while(*lineWithoutTab == '\t' || *lineWithoutTab == ' ') lineWithoutTab++;
+
+            for (size_t x = 0; x < col; x++){
+                size_t charCount = 0;
+                if (sscanf(lineWithoutTab, "%.17f;%n", data[y]+x, &charCount) != 1){
+                    printf("Error: LoadMatrix, impossible to find the %ld digit of the row %ld\n", x, y);
+                    goto cleanup;
+                }
+                printf("char count : %ld\n", charCount);
+                lineWithoutTab += charCount;
+                printf("%f ", data[y][x]);
+            }
+            printf("\n");
+        }
     }
     else {
         printf("WARNING: LoadMatrix, no more matrices found in the file\n");
@@ -178,6 +212,11 @@ struct Mat* LoadMatrix(FILE* file){
     }
 
     cleanup:
+    if (data != NULL){
+        for (size_t i = 0; i < row; i++)
+            free(data[i]);
+        free(data);
+    }
     free(lineBuffer);
     return NULL;
 }
