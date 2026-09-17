@@ -108,13 +108,9 @@ int main(){
                 }
             }
             if (nk_button_label(ctx, "save")){
-                //printf("save\n");
-                //SaveMatrix(network->layers[1]->activation, "save.ocr");
-                struct Mat* test = MatCreate(5, 5, NULL, InitWeights);
-                printf("\n");
-                MatPrint(test);
-                SaveMatrix(test, "save.ocr");
-                MatDestroy(test);
+                printf("saving OCR...\n");
+                int err = SaveNetwork(network, "save.ocr");
+
             }
             if (nk_button_label(ctx, "load")){
                 //printf("load\n");

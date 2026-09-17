@@ -7,5 +7,5 @@ int GetSample10(char*** sample, char*** files, size_t* fileCount);
 char** GetFileNames(char* dirPath, size_t* fileCount);
 // return a dynamically allocated array contatining all the file names of each directory in the training folder and stores the number of files in each directory in fileCount
 char*** GetAllTrainingFileNames(size_t** fileCount);
-int SaveMatrix(struct Mat* mat, char* path);
+int SaveMatrix(struct Mat* mat, FILE* file);
 struct Mat* LoadMatrix(FILE* file);

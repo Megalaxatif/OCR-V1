@@ -9,12 +9,10 @@ struct Layer{
 };
 
 struct Network{
-    struct Layer** layers;
     size_t layerCount;
     double learningRate;
+    struct Layer** layers;
 };
-
-
 
 struct Layer* CreateLayer(size_t currentLayerNeuronCount, size_t nextLayerNeuronCount, struct Mat* weights, struct Mat* biases); // explicit enough
 void DestroyLayer(struct Layer* layer); // you can't be more explicit than that

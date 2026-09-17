@@ -97,21 +97,25 @@ char** GetFileNames(char* dirPath, size_t* _fileCount){
     return files;
 }
 
-int SaveMatrix(struct Mat* mat, char* path){
-    if (mat == NULL || path == NULL){
+int SaveMatrix(struct Mat* mat, FILE* file){
+    if (mat == NULL || file == NULL){
         printf("Error: SaveMatrix, invalidArgument\n");
         return 1;
     }
-    FILE* file = fopen(path, "ab");
-    if (file == NULL){
-        printf("Error: SaveMatrix, impossible to open the file %s\n", path);
+    if (!fwrite(&mat->row, sizeof(size_t), 1, file)){
+        printf("Error: SaveMatrix, impossible to write the row number in the file\n");
         return 2;
+    };
+    if (!fwrite(&mat->col, sizeof(size_t), 1, file)){
+        printf("Error: SaveMatrix, impossible to write the col number in the file\n");
+        return 3;
     }
-    fwrite(&mat->row, sizeof(size_t), 1, file);
-    fwrite(&mat->col, sizeof(size_t), 1, file);
-    for(size_t y = 0; y < mat->row; y++)
-        fwrite(mat->data[y], sizeof(double), mat->col, file);
-    fclose(file);
+    for(size_t y = 0; y < mat->row; y++){
+        if (!fwrite(mat->data[y], sizeof(double), mat->col, file)){
+            printf("Error: SaveMatrix, impossible to write the data row %ld in the file\n", y);
+            return 4;
+        }
+    }
     return 0;
 }
 

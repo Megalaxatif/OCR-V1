@@ -1,10 +1,12 @@
 #include "header/neurons.h"
+#include "header/files.h"
 #include "header/image.h"
 #include "header/math.h"
 #include <SDL2/SDL_image.h>
 #include <SDL2/SDL_pixels.h>
 #include <SDL2/SDL_render.h>
 #include <SDL2/SDL_surface.h>
+#include <stdio.h>
 #include "header/init.h"
 double correctCounter = 0;
 double counter = 0;
@@ -233,6 +235,7 @@ struct Mat** GetAnswer10(){
 }
 
 struct Network* CreateNetwork(double learningRate, size_t layerCount, int* neuronsPerLayer, struct Mat* weights[], struct Mat* biases[]){
+    int cond = weights != NULL && biases != NULL;
     if (learningRate <= 0){
         printf("Error : CreateNetork, you need to have a learning Rate > 0\n");
         return NULL;
@@ -241,7 +244,11 @@ struct Network* CreateNetwork(double learningRate, size_t layerCount, int* neuro
         printf("Error : CreateNetwork, you need to have at least 3 layers in the network\n");
         return NULL;
     }
-    if (neuronsPerLayer == NULL){
+    if (cond && neuronsPerLayer != NULL){
+        printf("WARNING: CreateNetwork, no need to use the argument neuronsPerLayer for networks initialized with already existing weights and biases\n");
+        return NULL;
+    }
+    if (!cond && neuronsPerLayer == NULL){
         printf("Error: CreateNetwork, neuronsPerLayer is NULL\n");
         return NULL;
     }
@@ -251,17 +258,21 @@ struct Network* CreateNetwork(double learningRate, size_t layerCount, int* neuro
     network->learningRate = learningRate;
     network->layers = malloc(layerCount*sizeof(struct Layer*));
 
-    int cond = weights != NULL && biases != NULL;
     for(size_t i = 0; i < layerCount-1; i++){
         struct Mat* weight = cond ? weights[i] : NULL;
         struct Mat* bias = cond ? biases[i] : NULL;
-        network->layers[i] = CreateLayer(neuronsPerLayer[i], neuronsPerLayer[i+1], weight, bias);
+        size_t nextLayerNeuronCount = cond ? weights[i]->row : neuronsPerLayer[i+1];
+        size_t currentLayerNeuronCount = cond ? weights[i]->col : neuronsPerLayer[i];
+
+        network->layers[i] = CreateLayer(currentLayerNeuronCount, nextLayerNeuronCount, weight, bias);
         if (network->layers[i] == NULL){
             printf("Error: CreateNetwork, CreateLayer inside the loop returned NULL\n");
             return NULL;
         }
     }
-    network->layers[layerCount-1] = CreateLayer(neuronsPerLayer[layerCount-1], 1, NULL, NULL); // final layer (no weights nor biases) we can put any number as second argument
+    size_t lastLayerNeuronCount = cond ? weights[layerCount-1]->col : neuronsPerLayer[layerCount-1];
+    network->layers[layerCount-1] = CreateLayer(lastLayerNeuronCount, 1, NULL, NULL); // final layer (no weights nor biases) we can put any number as second argument
+
     if (network->layers[layerCount-1] == NULL){
         printf("Error: CreateNetwork, CreateLayer outside the loop returned NULL\n");
         return NULL;
@@ -471,10 +482,66 @@ int* SolveSudoku(char* sudokuPath, struct Network* network){
 }
 
 struct Network* LoadNetwork(char* path){
-    return 0; // TODO
+    if (path == NULL){
+        printf("Error: LoadNetwork, invalid argument\n");
+        return NULL;
+    }
+    FILE* file = fopen(path, "rb");
+    if (file == NULL){
+        printf("Error: LoadNetwork, impossible to open the file %s\n", path);
+        return NULL;
+    }
+
+    size_t layerCount = 0;
+    double learningRate = 0;
+
+    if (!fread(&layerCount, sizeof(size_t), 1, file)){
+        printf("Error: LoadNetwork, impossible to read the layerCount number\n");
+        fclose(file);
+        return NULL;
+    }
+    if (!fread(&learningRate, sizeof(double), 1, file)){
+        printf("Error: LoadNetwork, impossible to read the learningRate number\n");
+        fclose(file);
+        return NULL;
+    }
+
+    struct Mat** weights = malloc(layerCount * sizeof(struct Mat*));
+    struct Mat** biases = malloc(layerCount * sizeof(struct Mat*));
+
+    for (int i = 0; i < layerCount; i++){
+        weights[i] = LoadMatrix(file);
+        biases[i] = LoadMatrix(file);
+    }
+    fclose(file);
+    struct Network* network = CreateNetwork(learningRate, layerCount, NULL, weights, biases);
+    return network;
 }
 
 int SaveNetwork(struct Network* network, char* path){
-    FILE* file = fopen(path, "w");
+    if (network == NULL || path == NULL){
+        printf("Error: SaveNetwork, invalid argument\n");
+        return 1;
+    }
+    FILE* file = fopen(path, "wb");
+    if (file == NULL){
+        printf("Error: SaveNetwork, impossible to open the file %s\n", path);
+        return 2;
+    }
+    if (!fwrite(&network->layerCount, sizeof(size_t), 1, file)){
+        printf("Error: SaveNetwork, impossible to write the file %s\n", path);
+        fclose(file);
+        return 2;
+    }
+    if(!fwrite(&network->learningRate, sizeof(double), 1, file)){
 
+    }
+
+    for (size_t i = 0; i < network->layerCount; i++){
+        struct Layer* currentLayer = network->layers[i];
+        SaveMatrix(currentLayer->weights, file);
+        SaveMatrix(currentLayer->biases, file);
+    }
+    fclose(file);
+    return 0;
 }
