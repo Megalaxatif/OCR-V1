@@ -130,20 +130,25 @@ struct Mat* LoadMatrix(FILE* file){
     size_t lineBufferSize = 0;
     int matrixFound = 0;
 
-    while(getline(&lineBuffer, &lineBufferSize, file) && !matrixFound){
-        if (strstr(lineBuffer, "matrix"))
+    while(getline(&lineBuffer, &lineBufferSize, file) != EOF && !matrixFound){
+        //printf("line: %s", lineBuffer);
+        if (strstr(lineBuffer, "matrix")){
             matrixFound = 1;
+        }
     }
+    printf("line 1: %s", lineBuffer);
 
     if (matrixFound){
         size_t row = 0;
         size_t col = 0;
         char* cursor = NULL;
         // row
-        if (!getline(&lineBuffer, &lineBufferSize, file)){
+        printf("line 2 : %s", lineBuffer);
+        if (getline(&lineBuffer, &lineBufferSize, file) == EOF){
             printf("Error: LoadMatrix, the matrix is cut in half before the row argument\n");
             goto cleanup;
         }
+        printf("line 3: %s", lineBuffer);
         if ((cursor = strstr(lineBuffer, "row:")) == NULL){
             printf("Error: LoadMatrix, the matrix doesn't have a row argument\n");
             goto cleanup;
