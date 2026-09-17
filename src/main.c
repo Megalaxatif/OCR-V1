@@ -111,17 +111,22 @@ int main(){
                 //printf("save\n");
                 //SaveMatrix(network->layers[1]->activation, "save.ocr");
                 struct Mat* test = MatCreate(5, 5, NULL, InitWeights);
+                printf("\n");
+                MatPrint(test);
                 SaveMatrix(test, "save.ocr");
                 MatDestroy(test);
             }
             if (nk_button_label(ctx, "load")){
                 //printf("load\n");
-                FILE* file = fopen("save.ocr", "r");
+                FILE* file = fopen("save.ocr", "rb");
                 if (file == NULL){
                     printf("Error: main, impossible to load the ocr, file is NULL\n"); // TODO change
                     goto cleanup;
                 }
-                LoadMatrix(file);
+                struct Mat* mat = LoadMatrix(file);
+                printf("\n");
+                MatPrint(mat);
+                MatDestroy(mat);
                 fclose(file);
 
             }

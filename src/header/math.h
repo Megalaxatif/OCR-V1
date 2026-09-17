@@ -5,9 +5,9 @@
 #include <string.h>
 
 struct Mat{
-  double** data;
-  size_t col;
   size_t row;
+  size_t col;
+  double** data;
 };
 
 struct Mat* MatCreate(size_t row, size_t col, double* data[], void (*f)(struct Mat* mat)); // create a matrix with the given rows and columns and initialise it with the given data array or with an activation function
