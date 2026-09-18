@@ -4,6 +4,7 @@
 #include "header/init.h"
 #include "header/neurons.h"
 #include <SDL2/SDL_render.h>
+#include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 #include <time.h>
@@ -36,7 +37,11 @@ int main(){
         sample10[i] = malloc(100 * sizeof(char));
     }
     answer10 = GetAnswer10();
-
+    if (answer10 == NULL){
+        printf("Error: main, answer10 is NULL\n");
+        errorCode = 1;
+        goto cleanup;
+    }
     network = CreateNetwork(0.02, 4, neuronsPerLayer, NULL, NULL);
     if (network == NULL){
         printf("Error: main, network is NULL\n");
@@ -110,21 +115,23 @@ int main(){
             if (nk_button_label(ctx, "save")){
                 printf("saving OCR...\n");
                 int err = SaveNetwork(network, "save.ocr");
+                if (err != 0){
+                    printf("Error: main, SaveNetwork returned an error\n");
+                    errorCode = 1;
+                    goto cleanup;
+                }
 
             }
             if (nk_button_label(ctx, "load")){
-                //printf("load\n");
-                FILE* file = fopen("save.ocr", "rb");
-                if (file == NULL){
-                    printf("Error: main, impossible to load the ocr, file is NULL\n"); // TODO change
+                printf("loading OCR...\n");
+                struct Network* tmp = LoadNetwork("save.ocr");
+                if (tmp == NULL){
+                    printf("Error: main, LoadNetwork returned NULL\n");
+                    errorCode = 1;
                     goto cleanup;
                 }
-                struct Mat* mat = LoadMatrix(file);
-                printf("\n");
-                MatPrint(mat);
-                MatDestroy(mat);
-                fclose(file);
-
+                DestroyNetwork(network);
+                network = tmp;
             }
         }
         nk_end(ctx);

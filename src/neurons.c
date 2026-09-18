@@ -7,6 +7,7 @@
 #include <SDL2/SDL_render.h>
 #include <SDL2/SDL_surface.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include "header/init.h"
 double correctCounter = 0;
 double counter = 0;
@@ -227,6 +228,13 @@ struct Mat** GetAnswer10(){
     struct Mat** answer10 = malloc(10*sizeof(struct Mat*));
     for(int i = 0; i < 10; i++){
         answer10[i] = MatCreate(10, 1, NULL, NULL);
+        if (answer10[i] == NULL){
+            printf("Error: GetAnswer10, MatCreate returned NULL \n");
+            for (int j = 0; j < i; j++)
+                MatDestroy(answer10[j]);
+            free(answer10);
+            return NULL;
+        }
         for(int j = 0; j < 10; j++){
             answer10[i]->data[j][0] = i==j ? 1 : 0;
         }
@@ -261,8 +269,8 @@ struct Network* CreateNetwork(double learningRate, size_t layerCount, int* neuro
     for(size_t i = 0; i < layerCount-1; i++){
         struct Mat* weight = cond ? weights[i] : NULL;
         struct Mat* bias = cond ? biases[i] : NULL;
-        size_t nextLayerNeuronCount = cond ? weights[i]->row : neuronsPerLayer[i+1];
-        size_t currentLayerNeuronCount = cond ? weights[i]->col : neuronsPerLayer[i];
+        size_t nextLayerNeuronCount = cond ? weights[i]->row : (size_t)neuronsPerLayer[i+1];
+        size_t currentLayerNeuronCount = cond ? weights[i]->col : (size_t)neuronsPerLayer[i];
 
         network->layers[i] = CreateLayer(currentLayerNeuronCount, nextLayerNeuronCount, weight, bias);
         if (network->layers[i] == NULL){
@@ -270,7 +278,7 @@ struct Network* CreateNetwork(double learningRate, size_t layerCount, int* neuro
             return NULL;
         }
     }
-    size_t lastLayerNeuronCount = cond ? weights[layerCount-1]->col : neuronsPerLayer[layerCount-1];
+    size_t lastLayerNeuronCount = cond ? weights[layerCount-1]->col : (size_t)neuronsPerLayer[layerCount-1];
     network->layers[layerCount-1] = CreateLayer(lastLayerNeuronCount, 1, NULL, NULL); // final layer (no weights nor biases) we can put any number as second argument
 
     if (network->layers[layerCount-1] == NULL){
@@ -509,12 +517,24 @@ struct Network* LoadNetwork(char* path){
     struct Mat** weights = malloc(layerCount * sizeof(struct Mat*));
     struct Mat** biases = malloc(layerCount * sizeof(struct Mat*));
 
-    for (int i = 0; i < layerCount; i++){
+    for (size_t i = 0; i < layerCount; i++){
         weights[i] = LoadMatrix(file);
         biases[i] = LoadMatrix(file);
+        if (weights[i] == NULL || biases[i] == NULL){
+            printf("Error: LoadMatrix returned NULL\n");
+            free(weights);
+            free(biases);
+            fclose(file);
+            return NULL;
+        }
     }
     fclose(file);
     struct Network* network = CreateNetwork(learningRate, layerCount, NULL, weights, biases);
+    // we don't use the array but we use what they point
+    free(weights);
+    free(biases);
+    if (network == NULL)
+        printf("Error: LoadNetwork, CreateNetwork returned NULL\n");
     return network;
 }
 
@@ -529,18 +549,29 @@ int SaveNetwork(struct Network* network, char* path){
         return 2;
     }
     if (!fwrite(&network->layerCount, sizeof(size_t), 1, file)){
-        printf("Error: SaveNetwork, impossible to write the file %s\n", path);
+        printf("Error: SaveNetwork, impossible to write the layerCount in %s\n", path);
         fclose(file);
-        return 2;
+        return 3;
     }
     if(!fwrite(&network->learningRate, sizeof(double), 1, file)){
-
+        printf("Error: SaveNetwork, impossible to write the learningRate in %s\n", path);
+        fclose(file);
+        return 4;
     }
 
     for (size_t i = 0; i < network->layerCount; i++){
         struct Layer* currentLayer = network->layers[i];
-        SaveMatrix(currentLayer->weights, file);
-        SaveMatrix(currentLayer->biases, file);
+        int err = 0;
+        err = SaveMatrix(currentLayer->weights, file);
+        if (err != 0){
+            printf("Error: SaveMatrix returned NULL while trying to save the weights in %s\n", path);
+            return 5;
+        }
+        err = SaveMatrix(currentLayer->biases, file);
+        if (err != 0){
+            printf("Error: SaveMatrix returned NULL while trying to save the biases in %s\n", path);
+            return 6;
+        }
     }
     fclose(file);
     return 0;

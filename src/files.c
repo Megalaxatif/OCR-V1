@@ -135,19 +135,17 @@ struct Mat* LoadMatrix(FILE* file){
         printf("Error: LoadMatrix, impossible to read the col number\n");
         return NULL;
     }
-    if (row <= 0 || col <= 0){
-        printf("Error: LoadMatrix, invalid row or col value\n");
+    struct Mat* mat = MatCreate(row, col, NULL, NULL);
+    if (mat == NULL){
+        printf("Error: LoadMatrix, MatCreate returned NULL\n");
         return NULL;
     }
-
-    struct Mat* mat = MatCreate(row, col, NULL, NULL);
-    double ** data = mat->data;
+    double** data = mat->data;
     for(size_t y = 0; y < row; y++){
         if (!fread(data[y], sizeof(double), col, file)){
             printf("Error: LoadMatrix, impossible to read the data at row number %ld\n", y);
-            for(size_t i = 0; i < y; i++)
-                free(data[i]);
-            free(data);
+            MatDestroy(mat);
+            return NULL;
         }
     }
     return mat;
