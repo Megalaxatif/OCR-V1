@@ -243,6 +243,8 @@ struct Mat** GetAnswer10(){
 }
 
 struct Network* CreateNetwork(double learningRate, size_t layerCount, int* neuronsPerLayer, struct Mat* weights[], struct Mat* biases[]){
+    // NOTE if weights and biases are defined, they both are layerCount-1 elements long because the weights
+    // and biases of the last layer are not used in any computation so we don't need to store them
     int cond = weights != NULL && biases != NULL;
     if (learningRate <= 0){
         printf("Error : CreateNetork, you need to have a learning Rate > 0\n");
@@ -278,7 +280,7 @@ struct Network* CreateNetwork(double learningRate, size_t layerCount, int* neuro
             return NULL;
         }
     }
-    size_t lastLayerNeuronCount = cond ? weights[layerCount-1]->col : (size_t)neuronsPerLayer[layerCount-1];
+    size_t lastLayerNeuronCount = cond ? weights[layerCount-2]->col : (size_t)neuronsPerLayer[layerCount-1];
     network->layers[layerCount-1] = CreateLayer(lastLayerNeuronCount, 1, NULL, NULL); // final layer (no weights nor biases) we can put any number as second argument
 
     if (network->layers[layerCount-1] == NULL){
@@ -517,7 +519,7 @@ struct Network* LoadNetwork(char* path){
     struct Mat** weights = malloc(layerCount * sizeof(struct Mat*));
     struct Mat** biases = malloc(layerCount * sizeof(struct Mat*));
 
-    for (size_t i = 0; i < layerCount; i++){
+    for (size_t i = 0; i < layerCount - 1; i++){ // the last layer is not in the save file because its weights and biases are not usefull and are always recreated
         weights[i] = LoadMatrix(file);
         biases[i] = LoadMatrix(file);
         if (weights[i] == NULL || biases[i] == NULL){
@@ -559,7 +561,7 @@ int SaveNetwork(struct Network* network, char* path){
         return 4;
     }
 
-    for (size_t i = 0; i < network->layerCount; i++){
+    for (size_t i = 0; i < network->layerCount-1; i++){ // we don't save the last layer's weights and biases since they are not really used by the network
         struct Layer* currentLayer = network->layers[i];
         int err = 0;
         err = SaveMatrix(currentLayer->weights, file);
