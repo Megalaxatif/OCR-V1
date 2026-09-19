@@ -178,6 +178,8 @@ int main(){
         free(fileCount);
     }
 
+    DestroyNetwork(network);
+
     // clean sdl
     DestroySDL();
 

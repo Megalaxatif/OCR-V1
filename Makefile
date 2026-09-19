@@ -1,6 +1,6 @@
 CC = gcc
-CFLAGS = -Wall -Wextra -fsanitize=address -g -O3 -march=native
-LIBS = -lSDL2_image -lSDL2_ttf -lSDL2_gfx -lSDL2 -lm -fsanitize=address
+CFLAGS = -Wall -Wextra -fsanitize=address -g
+LIBS = -lSDL2_image -lSDL2_ttf -lSDL2_gfx -lSDL2 -lm -fsanitize=address -g
 
 SRC_DIR = src
 OBJ_DIR = obj

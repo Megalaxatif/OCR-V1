@@ -34,15 +34,24 @@ struct Layer* CreateLayer(size_t currentLayerNeuronCount, size_t nextLayerNeuron
 }
 
 void DestroyLayer(struct Layer* layer){
-    if (layer == NULL) return;
-    if (layer->preActivation != NULL)
+    if (layer == NULL)
+        return;
+    if (layer->preActivation != NULL) {
+        // printf("layer preActivation addr: %p\n", layer->preActivation);
         MatDestroy(layer->preActivation);
-    if (layer->activation != NULL)
+    }
+    if (layer->activation != NULL) {
+        // printf("layer activation addr: %p\n", layer->activation);
         MatDestroy(layer->activation);
-    if (layer->biases != NULL)
+    }
+    if (layer->biases != NULL) {
+        // printf("layer biases addr: %p\n", layer->biases);
         MatDestroy(layer->biases);
-    if (layer->weights != NULL)
+    }
+    if (layer->weights != NULL) {
+        // printf("layer weights addr: %p\n", layer->weights);
         MatDestroy(layer->weights);
+    }
     free(layer);
 }
 
@@ -93,6 +102,7 @@ int ComputeActivation(struct Layer* layer, struct Layer* nextLayer){ // calculat
 
 int ForwardPass(struct Network* network, struct Mat* input){
     input = InvertForwardPassGrayScaleMatrix(input); // needed if we are using black on white training images
+    MatDestroy(network->layers[0]->activation);
     network->layers[0]->activation = input;
     size_t i = 0;
     while(i < network->layerCount - 1){
@@ -291,7 +301,11 @@ struct Network* CreateNetwork(double learningRate, size_t layerCount, int* neuro
 }
 
 void DestroyNetwork(struct Network* network){
-    if (network == NULL) return;
+    printf("FREE NETWORK\n");
+    if (network == NULL) {
+        printf("NETWORK NULL\n");
+        return;
+    }
     for(size_t i = 0; i < network->layerCount; i++){
         DestroyLayer(network->layers[i]);
     }
@@ -368,7 +382,7 @@ int SolveImage(char* path, struct Network* network, int isTraining){
 
     int errorCode = ForwardPass(network, grayScale);
 
-    // the nework must not delete the first activation matrix if it's training because of backpropagation
+    // the network must not delete the first activation matrix if it's training because of backpropagation
     if (!isTraining){
         MatDestroy(grayScale);
         network->layers[0]->activation = NULL;
@@ -390,6 +404,7 @@ int* SolveSudoku(char* sudokuPath, struct Network* network){
         return NULL;
     }
     struct Mat* gridGrayScale = GetGridGrayScaleMatrix(sudokuPath);
+    // printf("addr gridGrayScale %p\n", gridGrayScale);
     if (gridGrayScale == NULL){
         printf("Error: SolveSudoku, gridGrayScale is NULL\n");
         return NULL;
@@ -433,12 +448,18 @@ int* SolveSudoku(char* sudokuPath, struct Network* network){
     //     }
     // }
     //-------
+    // MatDestroy(network->layers[0]->activation);
     digitGrayScales = ConvertTexturesToGrayScale(digitTextures, 81);
+    //goto cleanup;
     if (digitGrayScales == NULL){
         printf("Error: SolveSudoku, ConvertTexturesToGrayScale returned NULL\n");
         goto cleanup;
     }
     digitGrayScales = DeleteBlankGrayScales(digitGrayScales, 81);
+    if (digitGrayScales == NULL){
+        printf("Error: SolveSudoku, DeleteBlankGrayScales returned NULL\n");
+        goto cleanup;
+    }
     // for(int i = 0; i < 81; i++){
     //     struct Mat* tmp = InvertForwardPassGrayScaleMatrix(digitGrayScales[i]);
     //      DrawDigitGrayScales(&tmp, digitRects + i, 1, gridGrayScale);
@@ -482,9 +503,9 @@ int* SolveSudoku(char* sudokuPath, struct Network* network){
     }
 
     if (digitGrayScales != NULL){
-        for (int i = 0; i < 81; i++)
-            MatDestroy(digitGrayScales[i]);
-        network->layers[0]->activation = NULL; // important
+        // for (int i = 0; i < 81; i++)
+        //     MatDestroy(digitGrayScales[i]);
+        printf("HERE network->layers[0]->activation: %p\n", network->layers[0]->activation);
         free(digitGrayScales);
     }
 

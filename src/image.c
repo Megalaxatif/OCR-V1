@@ -580,6 +580,7 @@ struct Mat* GetGridGrayScaleMatrix(char* imgFileName){
 
     Uint8* pixels = surface->pixels; // cast the void*
     struct Mat* grayScale = MatCreate(surface->h, surface->w, NULL, NULL);
+    // printf("addr grayscale: %p\n", grayScale);
 
     if (format == SDL_PIXELFORMAT_INDEX8){
         SDL_Color* colorPalette = surface->format->palette->colors;
@@ -630,7 +631,9 @@ struct Mat* GetForwardPassGrayScaleMatrix(SDL_Surface* surface){
     }
 
     Uint8* pixels = surface->pixels; // cast the void*
+    // TODO check if MatCreate fails
     struct Mat* grayScale = MatCreate(NETWORK_IMG_SIZE*NETWORK_IMG_SIZE, 1, NULL, NULL); // the matrix must be a column matrix for the network
+    // printf("addr grayscale2: %p\n", grayScale);
 
     for(size_t y = 0; y < NETWORK_IMG_SIZE; y++){
         for(size_t x = 0; x < NETWORK_IMG_SIZE; x++){
