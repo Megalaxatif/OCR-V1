@@ -1,5 +1,6 @@
 #include "header/image.h"
 #include "header/math.h"
+#include "header/settings.h"
 #include "header/init.h"
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>

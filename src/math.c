@@ -101,7 +101,10 @@ struct Mat* MatCreate(size_t row, size_t col, double* data[], void (*f)(struct M
 }
 
 void MatDestroy(struct Mat* mat){
-    if (mat == NULL) return;
+    if (mat == NULL) {
+        printf("WARNING: MatDestroy, the matrix is NULL\n");
+        return;
+    };
     if (mat->data != NULL){
         if (*(mat->data) != NULL){
             for(size_t i = 0; i < mat->row; i++){

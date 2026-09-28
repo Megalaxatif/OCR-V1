@@ -2,22 +2,21 @@
 #define NK_SDL_RENDERER_IMPLEMENTATION
 
 #include "header/init.h"
+#include "header/settings.h"
 #include <stdio.h>
-// int InitImGui(){
-//     // TODO: error handling
-//     IMGUI_CHECKVERSION();
-//     ImGui::CreateContext();
-//     ImGuiIO& io = ImGui::GetIO(); (void)io;
-//     ImGui::StyleColorsDark();
-//     ImGui_ImplSDL2_InitForSDLRenderer(window, renderer); // initialise ImGui
-//     ImGui_ImplSDLRenderer2_Init(renderer);
-//     return 0;
-// }
 
 // init of the two global variables
 SDL_Renderer* renderer = NULL;
 SDL_Window* window = NULL;
 
+struct nk_context* InitNuklear(){
+    struct nk_context* ctx = nk_sdl_init(window, renderer);
+    struct nk_font_atlas *atlas;
+
+    nk_sdl_font_stash_begin(&atlas);
+    nk_sdl_font_stash_end();
+    return ctx;
+}
 
 int InitSDL(){
     if(SDL_Init(SDL_INIT_VIDEO) != 0) {

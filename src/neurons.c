@@ -8,7 +8,8 @@
 #include <SDL2/SDL_surface.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include "header/init.h"
+#include "header/settings.h"
+#include "header/ocr.h"
 double correctCounter = 0;
 double counter = 0;
 
@@ -252,7 +253,7 @@ struct Mat** GetAnswer10(){
     return answer10;
 }
 
-struct Network* CreateNetwork(double learningRate, size_t layerCount, int* neuronsPerLayer, struct Mat* weights[], struct Mat* biases[]){
+struct Network* CreateNetwork(double learningRate, size_t layerCount, int* neuronsPerLayer,  struct Mat* weights[], struct Mat* biases[]){
     // NOTE if weights and biases are defined, they both are layerCount-1 elements long because the weights
     // and biases of the last layer are not used in any computation so we don't need to store them
     int cond = weights != NULL && biases != NULL;
@@ -260,8 +261,8 @@ struct Network* CreateNetwork(double learningRate, size_t layerCount, int* neuro
         printf("Error : CreateNetork, you need to have a learning Rate > 0\n");
         return NULL;
     }
-    if (layerCount < 3){
-        printf("Error : CreateNetwork, you need to have at least 3 layers in the network\n");
+    if (layerCount < DEFAULT_LAYER_COUNT){
+        printf("Error : CreateNetwork, you need to have at least %d layers in the network\n", DEFAULT_LAYER_COUNT);
         return NULL;
     }
     if (cond && neuronsPerLayer != NULL){
@@ -301,14 +302,13 @@ struct Network* CreateNetwork(double learningRate, size_t layerCount, int* neuro
 }
 
 void DestroyNetwork(struct Network* network){
-    printf("FREE NETWORK\n");
+    printf("DESTROY NETWORK\n");
     if (network == NULL) {
-        printf("NETWORK NULL\n");
+        printf("WARNING: DestroyNetwork, no network to destroy (network is NULL)\n");
         return;
     }
-    for(size_t i = 0; i < network->layerCount; i++){
+    for(size_t i = 0; i < network->layerCount; i++)
         DestroyLayer(network->layers[i]);
-    }
     free(network->layers);
     free(network);
 }
@@ -397,119 +397,71 @@ int SolveImage(char* path, struct Network* network, int isTraining){
 
     return guessedDigit;
 }
-
-int* SolveSudoku(char* sudokuPath, struct Network* network){
-    if (sudokuPath == NULL || network == NULL){
+int SolveSudoku(struct OCR* ocr){
+    if (ocr == NULL){
         printf("Error: SolveSudoku, invalid argument\n");
-        return NULL;
+        return 1;
     }
-    struct Mat* gridGrayScale = GetGridGrayScaleMatrix(sudokuPath);
-    // printf("addr gridGrayScale %p\n", gridGrayScale);
+    struct Mat* gridGrayScale = GetGridGrayScaleMatrix(ocr->settings->sudokuPath);
+
     if (gridGrayScale == NULL){
         printf("Error: SolveSudoku, gridGrayScale is NULL\n");
-        return NULL;
+        return 2;
     }
-    struct SDL_Rect* digitRects = NULL;
-    SDL_Texture** digitTextures = NULL;
-    struct Mat** digitGrayScales = NULL;
-    int* digits = NULL;
 
     size_t horizontalLineCount = 0;
     SDL_Rect* horizontalLines = ScanHorizontalLines(gridGrayScale, &horizontalLineCount);
-    size_t horizontalBlockCount = 0;
-    SDL_Rect* horizontalBlocks = ConvertHorizontalLinesToBlocks(horizontalLines, horizontalLineCount, &horizontalBlockCount); // this function destroys horizontalLines
+    ocr->sudoku->horizontalBlocks = ConvertHorizontalLinesToBlocks(horizontalLines, horizontalLineCount, &ocr->sudoku->horizontalBlockCount); // this function destroys horizontalLines
 
     size_t verticalLineCount = 0;
     SDL_Rect* verticalLines = ScanVerticalLines(gridGrayScale, &verticalLineCount);
-    size_t verticalBlockCount = 0;
-    SDL_Rect* verticalBlocks = ConvertVerticalLinesToBlocks(verticalLines, verticalLineCount, &verticalBlockCount); // this function destroys verticalLines
+    ocr->sudoku->verticalBlocks = ConvertVerticalLinesToBlocks(verticalLines, verticalLineCount, &ocr->sudoku->verticalBlockCount); // this function destroys verticalLines
 
-    int ret = SortBlocks(&horizontalBlocks, &verticalBlocks, &horizontalBlockCount, &verticalBlockCount);
-    if (ret != 0){
-        printf("Error: SolveSudoku, SortBlocks returned %d\n", ret);
+    free(horizontalLines);
+    free(verticalLines);
+
+    int errorCode = SortBlocks(&ocr->sudoku->horizontalBlocks, &ocr->sudoku->verticalBlocks, &ocr->sudoku->horizontalBlockCount, &ocr->sudoku->verticalBlockCount);
+    if (errorCode != 0){
+        printf("Error: SolveSudoku, SortBlocks returned %d\n", errorCode);
         goto cleanup;
     }
 
-    digitRects = GetSudokuDigitRects(horizontalBlocks, verticalBlocks); // always return a 81 array
-    if (digitRects == NULL){
+    ocr->sudoku->digitRects = GetSudokuDigitRects(ocr->sudoku->horizontalBlocks, ocr->sudoku->verticalBlocks); // always return a 81 array
+    if (ocr->sudoku->digitRects == NULL){
         printf("Error: SolveSudoku, GetSudokuDigitRects returned NULL\n");
+        errorCode = 3;
         goto cleanup;
     }
-    digitTextures = GetSudokuDigitTextures(digitRects, sudokuPath);
-    if (digitTextures == NULL){
+    ocr->sudoku->digitTextures = GetSudokuDigitTextures(ocr->sudoku->digitRects, ocr->settings->sudokuPath);
+    if (ocr->sudoku->digitTextures == NULL){
         printf("Error: SolveSudoku, GetSudokuDigitTextures returned NULL\n");
+        errorCode = 3;
         goto cleanup;
     }
-    // debug -----
-    // SDL_SetRenderTarget(renderer, NULL);
-    // for(int i = 0; i < 9; i++){
-    //     for(int j = 0; j < 9; j++){
-    //         SDL_RenderCopy(renderer, digitTextures[i*9+j], NULL, digitRects+i*9+j);
-    //     }
-    // }
-    //-------
-    // MatDestroy(network->layers[0]->activation);
-    digitGrayScales = ConvertTexturesToGrayScale(digitTextures, 81);
+    ocr->sudoku->digitGrayScales = ConvertTexturesToGrayScale(ocr->sudoku->digitTextures, 81);
     //goto cleanup;
-    if (digitGrayScales == NULL){
+    if (ocr->sudoku->digitGrayScales == NULL){
         printf("Error: SolveSudoku, ConvertTexturesToGrayScale returned NULL\n");
+        errorCode = 3;
         goto cleanup;
     }
-    digitGrayScales = DeleteBlankGrayScales(digitGrayScales, 81);
-    if (digitGrayScales == NULL){
+    ocr->sudoku->digitGrayScales = DeleteBlankGrayScales(ocr->sudoku->digitGrayScales, 81);
+    if (ocr->sudoku->digitGrayScales == NULL){
         printf("Error: SolveSudoku, DeleteBlankGrayScales returned NULL\n");
+        errorCode = 3;
         goto cleanup;
     }
-    // for(int i = 0; i < 81; i++){
-    //     struct Mat* tmp = InvertForwardPassGrayScaleMatrix(digitGrayScales[i]);
-    //      DrawDigitGrayScales(&tmp, digitRects + i, 1, gridGrayScale);
-    // }
-    //PrintDigitGrayScales(digitGrayScales, 81); // debug
-    // SDL_Surface* sudoku = IMG_Load(sudokuPath);
-    // SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, sudoku);
-    // SDL_FreeSurface(sudoku);
-    // SDL_SetRenderTarget(renderer, NULL);
-    // SDL_RenderCopy(renderer, texture, NULL, NULL);
-    // SDL_DestroyTexture(texture);
-    //DrawDigitGrayScales(digitGrayScales, digitRects, 81, gridGrayScale);
-    //DrawRects(digitRects, 81, gridGrayScale, (SDL_Color){0,255,0,255});
-
-    digits = SolveGrayScales(digitGrayScales, 81, network);
-    if (digits == NULL){
+    ocr->sudoku->digits = SolveGrayScales(ocr->sudoku->digitGrayScales, 81, ocr->network);
+    if (ocr->sudoku->digits == NULL){
         printf("Error: SolveSudoku, SolveGrayScales returned NULL\n");
+        errorCode = 3;
         goto cleanup;
     }
 
     cleanup:
     // destroy grid
     MatDestroy(gridGrayScale);
-
-    // free lines and blocks
-    free(horizontalLines);
-    free(horizontalBlocks);
-    free(verticalLines);
-    free(verticalBlocks);
-
-    // free digitRects
-    if (digitRects != NULL){
-        free(digitRects);
-    }
-
-    // destroy digitTextures
-    if (digitTextures != NULL){
-        for (int i = 0; i < 81; i++)
-            SDL_DestroyTexture(digitTextures[i]);
-        free(digitTextures);
-    }
-
-    if (digitGrayScales != NULL){
-        // for (int i = 0; i < 81; i++)
-        //     MatDestroy(digitGrayScales[i]);
-        printf("HERE network->layers[0]->activation: %p\n", network->layers[0]->activation);
-        free(digitGrayScales);
-    }
-
-    return digits;
+    return errorCode;
 }
 
 struct Network* LoadNetwork(char* path){

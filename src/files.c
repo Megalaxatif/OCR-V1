@@ -1,5 +1,5 @@
 #include "header/files.h"
-#include "header/init.h"
+#include "header/settings.h"
 #include "header/math.h"
 #include <stdio.h>
 #include <dirent.h>
