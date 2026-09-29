@@ -155,7 +155,7 @@ SDL_Rect* ScanVerticalLines(struct Mat* grayScale, size_t* lineCount_){
         return NULL;
     }
     // TODO: remove that and use a point buffer instead (use one similar to minimake)
-    const int lineArraySize = 2000;
+    const size_t lineArraySize = 2000;
     SDL_Rect* lines = malloc(lineArraySize* sizeof(SDL_Rect));
 
     size_t lineCount = 0;
@@ -296,7 +296,7 @@ SDL_Rect* ScanHorizontalLines(struct Mat* grayScale, size_t* lineCount_){
         return NULL;
     }
     // TODO: remove that and use a point buffer instead (use one similar to minimake)
-    const int lineArraySize = 2000;
+    const size_t lineArraySize = 2000;
     SDL_Rect* lines = malloc(lineArraySize* sizeof(SDL_Rect));
 
     size_t lineCount = 0;
@@ -429,7 +429,7 @@ SDL_Rect* ConvertHorizontalLinesToBlocks(SDL_Rect* lines, size_t lineCount, size
     return blockList;
 }
 // -----------------------------------
-
+// TODO maybe recode that function
 int SortBlocks(SDL_Rect** horizontalBlocks, SDL_Rect** verticalBlocks, size_t* horizontalBlockCount, size_t* verticalBlockCount){
     if (horizontalBlocks == NULL || *horizontalBlocks == NULL || *verticalBlocks == NULL || verticalBlocks == NULL || horizontalBlockCount == NULL || verticalBlockCount == NULL){
         printf("Error: SortBlocks, invalid arguments\n");

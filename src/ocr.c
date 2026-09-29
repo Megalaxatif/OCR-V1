@@ -5,39 +5,57 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+void DestroySudokuArguments(
+    SDL_Rect* horizontalBlocks,
+    SDL_Rect* verticalBlocks,
+    SDL_Rect* digitRects,
+    SDL_Texture** digitTextures,
+    struct Mat** digitGrayScales,
+    int* digits){
+
+    // free blocks
+    if (horizontalBlocks != NULL)
+        free(horizontalBlocks);
+
+    if (verticalBlocks != NULL)
+        free(verticalBlocks);
+
+    // free digitRects
+    if (digitRects != NULL)
+        free(digitRects);
+
+    // destroy digitTextures
+    if (digitTextures != NULL){
+        for (int i = 0; i < 81; i++)
+            SDL_DestroyTexture(digitTextures[i]);
+        free(digitTextures);
+    }
+
+    // destroy grayScales
+    if (digitGrayScales != NULL){
+        for (int i = 0; i < 81; i++)
+            MatDestroy(digitGrayScales[i]);
+        free(digitGrayScales);
+    }
+    // free digits
+    if (digits != NULL)
+        free(digits);
+}
+
 void DestroySudoku(struct Sudoku* sudoku){
     printf("DESTROY SUDOKU\n");
     if (sudoku == NULL){
         printf("WARNING: DestroySudoku, no sudoku to destroy (sudoku is NULL)\n");
         return;
     }
-    // free blocks
-    if (sudoku->horizontalBlocks != NULL)
-        free(sudoku->horizontalBlocks);
-
-    if (sudoku->verticalBlocks != NULL)
-        free(sudoku->verticalBlocks);
-
-    // free digitRects
-    if (sudoku->digitRects != NULL)
-        free(sudoku->digitRects);
-
-    // destroy digitTextures
-    if (sudoku->digitTextures != NULL){
-        for (int i = 0; i < 81; i++)
-            SDL_DestroyTexture(sudoku->digitTextures[i]);
-        free(sudoku->digitTextures);
-    }
-
-    // destroy grayScales
-    if (sudoku->digitGrayScales != NULL){
-        for (int i = 0; i < 81; i++)
-            MatDestroy(sudoku->digitGrayScales[i]);
-        free(sudoku->digitGrayScales);
-    }
-    // free digits
-    if (sudoku->digits != NULL)
-        free(sudoku->digits);
+    DestroySudokuArguments(
+        sudoku->horizontalBlocks,
+        sudoku->verticalBlocks,
+        sudoku->digitRects,
+        sudoku->digitTextures,
+        sudoku->digitGrayScales,
+        sudoku->digits
+    );
 
     free(sudoku);
 }

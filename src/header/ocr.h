@@ -45,4 +45,12 @@ struct OCR {
 
 int Update(struct nk_context* ctx, struct OCR* ocr);
 void DestroyOCR(struct OCR* ocr);
+// this function exists because I'm too lazy to copy paste the same code for both DestroyOCR and the cleanup label of SolveSudoku
+void DestroySudokuArguments(
+    SDL_Rect* horizontalBlocks,
+    SDL_Rect* verticalBlocks,
+    SDL_Rect* digitRects,
+    SDL_Texture** digitTextures,
+    struct Mat** digitGrayScales,
+    int* digits);
 struct OCR* CreateOCR();

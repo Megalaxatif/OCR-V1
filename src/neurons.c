@@ -397,12 +397,14 @@ int SolveImage(char* path, struct Network* network, int isTraining){
 
     return guessedDigit;
 }
+
 int SolveSudoku(struct OCR* ocr){
     if (ocr == NULL){
         printf("Error: SolveSudoku, invalid argument\n");
         return 1;
     }
-    struct Mat* gridGrayScale = GetGridGrayScaleMatrix(ocr->settings->sudokuPath);
+    char* sudokuPath = ocr->settings->sudokuPath;
+    struct Mat* gridGrayScale = GetGridGrayScaleMatrix(sudokuPath);
 
     if (gridGrayScale == NULL){
         printf("Error: SolveSudoku, gridGrayScale is NULL\n");
@@ -411,57 +413,74 @@ int SolveSudoku(struct OCR* ocr){
 
     size_t horizontalLineCount = 0;
     SDL_Rect* horizontalLines = ScanHorizontalLines(gridGrayScale, &horizontalLineCount);
-    ocr->sudoku->horizontalBlocks = ConvertHorizontalLinesToBlocks(horizontalLines, horizontalLineCount, &ocr->sudoku->horizontalBlockCount); // this function destroys horizontalLines
+    size_t horizontalBlockCount = 0;
+    SDL_Rect* horizontalBlocks = ConvertHorizontalLinesToBlocks(horizontalLines, horizontalLineCount, &horizontalBlockCount); // this function destroys horizontalLines
 
     size_t verticalLineCount = 0;
     SDL_Rect* verticalLines = ScanVerticalLines(gridGrayScale, &verticalLineCount);
-    ocr->sudoku->verticalBlocks = ConvertVerticalLinesToBlocks(verticalLines, verticalLineCount, &ocr->sudoku->verticalBlockCount); // this function destroys verticalLines
+    size_t verticalBlockCount = 0;
+    SDL_Rect* verticalBlocks = ConvertVerticalLinesToBlocks(verticalLines, verticalLineCount, &verticalBlockCount); // this function destroys verticalLines
 
     free(horizontalLines);
     free(verticalLines);
 
-    int errorCode = SortBlocks(&ocr->sudoku->horizontalBlocks, &ocr->sudoku->verticalBlocks, &ocr->sudoku->horizontalBlockCount, &ocr->sudoku->verticalBlockCount);
+    SDL_Texture** digitTextures = NULL;
+    SDL_Rect* digitRects = NULL;
+    struct Mat** digitGrayScales = NULL;
+    int* digits = NULL;
+
+
+    int errorCode = SortBlocks(&horizontalBlocks, &verticalBlocks, &horizontalBlockCount, &verticalBlockCount);
     if (errorCode != 0){
         printf("Error: SolveSudoku, SortBlocks returned %d\n", errorCode);
         goto cleanup;
     }
 
-    ocr->sudoku->digitRects = GetSudokuDigitRects(ocr->sudoku->horizontalBlocks, ocr->sudoku->verticalBlocks); // always return a 81 array
-    if (ocr->sudoku->digitRects == NULL){
+    digitRects = GetSudokuDigitRects(horizontalBlocks, verticalBlocks); // always return a 81 array
+    if (digitRects == NULL){
         printf("Error: SolveSudoku, GetSudokuDigitRects returned NULL\n");
         errorCode = 3;
         goto cleanup;
     }
-    ocr->sudoku->digitTextures = GetSudokuDigitTextures(ocr->sudoku->digitRects, ocr->settings->sudokuPath);
-    if (ocr->sudoku->digitTextures == NULL){
+    digitTextures = GetSudokuDigitTextures(digitRects, sudokuPath);
+    if (digitTextures == NULL){
         printf("Error: SolveSudoku, GetSudokuDigitTextures returned NULL\n");
         errorCode = 3;
         goto cleanup;
     }
-    ocr->sudoku->digitGrayScales = ConvertTexturesToGrayScale(ocr->sudoku->digitTextures, 81);
-    //goto cleanup;
-    if (ocr->sudoku->digitGrayScales == NULL){
+    digitGrayScales = ConvertTexturesToGrayScale(digitTextures, 81);
+    digitGrayScales = DeleteBlankGrayScales(digitGrayScales, 81);
+
+    if (digitGrayScales == NULL){
         printf("Error: SolveSudoku, ConvertTexturesToGrayScale returned NULL\n");
         errorCode = 3;
         goto cleanup;
     }
-    ocr->sudoku->digitGrayScales = DeleteBlankGrayScales(ocr->sudoku->digitGrayScales, 81);
-    if (ocr->sudoku->digitGrayScales == NULL){
-        printf("Error: SolveSudoku, DeleteBlankGrayScales returned NULL\n");
-        errorCode = 3;
-        goto cleanup;
-    }
-    ocr->sudoku->digits = SolveGrayScales(ocr->sudoku->digitGrayScales, 81, ocr->network);
-    if (ocr->sudoku->digits == NULL){
+
+    digits = SolveGrayScales(digitGrayScales, 81, ocr->network);
+    if (digits == NULL){
         printf("Error: SolveSudoku, SolveGrayScales returned NULL\n");
         errorCode = 3;
         goto cleanup;
     }
 
+    ocr->sudoku->horizontalBlocks = horizontalBlocks;
+    ocr->sudoku->verticalBlocks = verticalBlocks;
+    ocr->sudoku->horizontalBlockCount = horizontalBlockCount;
+    ocr->sudoku->verticalBlockCount = verticalBlockCount;
+    ocr->sudoku->digitRects = digitRects;
+    ocr->sudoku->digitTextures = digitTextures;
+    ocr->sudoku->digitGrayScales = digitGrayScales;
+    ocr->sudoku->digits = digits;
+
     cleanup:
     // destroy grid
     MatDestroy(gridGrayScale);
+    if (errorCode != 0)
+        DestroySudokuArguments(horizontalBlocks, verticalBlocks, digitRects, digitTextures, digitGrayScales, digits);
     return errorCode;
+
+
 }
 
 struct Network* LoadNetwork(char* path){
