@@ -11,7 +11,7 @@
 #include <SDL2/SDL_surface.h>
 #include <stdalign.h>
 
-struct Mat* InvertForwardPassGrayScaleMatrix(struct Mat* grayScale){
+struct Mat* InvertGrayScaleMatrix(struct Mat* grayScale){
     if (grayScale == NULL){
         printf("Error: InvertForwardPassGrayScaleMatrix, invalid argument");
         return NULL;
@@ -79,46 +79,6 @@ int DrawFilledRects(SDL_Rect* rects, size_t rectCount, struct Mat* referenceMatr
     SDL_DestroyTexture(texture);
     return 0;
 }
-
-int DrawDigitGrayScales(struct Mat** digitGrayScales, SDL_Rect* rects, size_t rectCount, struct Mat* referenceMatrix){
-    if (digitGrayScales == NULL || *digitGrayScales == NULL || rects == NULL || referenceMatrix == NULL){
-        printf("Error: DrawDigitGrayScales, invalid argument\n");
-        return 1;
-    }
-    SDL_Texture* texture = SDL_CreateTexture(
-        renderer,
-        SDL_PIXELFORMAT_RGBA8888,
-        SDL_TEXTUREACCESS_TARGET,
-        referenceMatrix->col,
-        referenceMatrix->row
-    );
-    SDL_SetTextureBlendMode(texture, SDL_BLENDMODE_BLEND);
-    SDL_SetRenderTarget(renderer, texture);
-    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
-    SDL_RenderClear(renderer);
-
-    for(size_t i = 0; i < rectCount; i++){
-        struct Mat* currentGrayScale = digitGrayScales[i];
-        //MatPrint(currentGrayScale);
-        SDL_Rect currentRect = rects[i];
-        if (currentGrayScale->col != 1 || currentGrayScale->row != NETWORK_IMG_SIZE*NETWORK_IMG_SIZE){
-            printf("Error: DrawDigitGrayScales, the matrix given doesn't have valid dimensions for a digit grayscale");
-            return 2;
-        }
-        for(size_t y = 0; y < NETWORK_IMG_SIZE; y++){
-            for(size_t x = 0; x < NETWORK_IMG_SIZE; x++){
-                Uint8 grayCode = currentGrayScale->data[y*NETWORK_IMG_SIZE + x][0]*255;
-                SDL_SetRenderDrawColor(renderer, grayCode, grayCode, grayCode, 255);
-                SDL_RenderDrawPoint(renderer, x + currentRect.x, y + currentRect.y);
-            }
-        }
-    }
-    SDL_SetRenderTarget(renderer, NULL);
-    SDL_RenderCopy(renderer, texture, NULL, NULL);
-    SDL_DestroyTexture(texture);
-    return 0;
-}
-
 
 int DrawGrayScale(struct Mat* grayScale){
     if (grayScale == NULL) {
@@ -580,7 +540,6 @@ struct Mat* GetGridGrayScaleMatrix(char* imgFileName){
 
     Uint8* pixels = surface->pixels; // cast the void*
     struct Mat* grayScale = MatCreate(surface->h, surface->w, NULL, NULL);
-    // printf("addr grayscale: %p\n", grayScale);
 
     if (format == SDL_PIXELFORMAT_INDEX8){
         SDL_Color* colorPalette = surface->format->palette->colors;

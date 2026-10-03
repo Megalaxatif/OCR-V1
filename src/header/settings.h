@@ -12,6 +12,8 @@
 #define SUDOKU_PATH_BUFFER_SIZE 128 // size of the buffer containing the path to the sudoku we want to solve
 #define NETWORK_PATH_BUFFER_SIZE 128 // size of the buffer containing the path we want to use to either store or load the network
 
+#define DEFAULT_DEBUG_INFO 0
+#define DEFAULT_NETWORK_PATH "save.ocr"
 #define DEFAULT_TRAINING_CYCLE_COUNT 200
 #define DEFAULT_LEARNING_RATE 0.02
 #define MAXIMUM_LAYER_COUNT 100

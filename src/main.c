@@ -1,15 +1,9 @@
-#include "header/files.h"
-#include "header/image.h"
-#include "header/math.h"
 #include "header/init.h"
-#include "header/settings.h"
 #include "header/ocr.h"
-#include "header/neurons.h"
 #include <SDL2/SDL_events.h>
 #include <SDL2/SDL_render.h>
 #include <SDL2/SDL_surface.h>
 #include <stdio.h>
-#include <string.h>
 #include <stdlib.h>
 #include <time.h>
 #include <stdlib.h>

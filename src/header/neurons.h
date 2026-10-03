@@ -2,7 +2,7 @@
 #include "math.h"
 #include "ocr.h"
 
-// debug functions
+// debug functions -------
 void PrintDigitGrayScales(struct Mat** digitGrayScale, size_t grayScaleCount);
 
 

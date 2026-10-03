@@ -286,7 +286,7 @@ int Train(struct Network* network, char** sample, size_t sampleSize, struct Mat*
 }
 
 int SolveGrayScale(struct Network* network, struct Mat* input){
-    input = InvertForwardPassGrayScaleMatrix(input); // needed if we are using black on white training images
+    input = InvertGrayScaleMatrix(input); // needed if we are using black on white training images
     MatCopy(input, network->layers[0]->activation); // copy the input in the activation of the first layer
     size_t i = 0;
     while(i < network->layerCount - 1){

@@ -3,6 +3,41 @@
 #include "header/files.h"
 #include "header/ocr.h"
 
+int LoadNetworkButton(struct OCR* ocr){
+    if (ocr == NULL){
+        printf("Error: LoadNetworkButton, invalid argument\n");
+        return 1;
+    }
+    struct Network* tmp = LoadNetwork(ocr->settings->networkPath);
+    if (tmp == NULL){
+        printf("Error: LoadNetworkButton, LoadNetwork returned NULL\n");
+        return 1;
+    }
+    else {
+        DestroyNetwork(ocr->network);
+        ocr->network = tmp;
+    }
+    return 0;
+}
+
+int CreateNetworkButton(struct OCR* ocr){
+    if (ocr == NULL){
+        printf("Error: CreateNetworkButton, invalid argument\n");
+        return 1;
+    }
+    struct Settings* settings = ocr->settings;
+    struct Network* tmp = CreateNetwork(settings->learningRate, settings->layerCount, settings->neuronsPerLayer, NULL, NULL);
+    if (tmp == NULL){
+        printf("Error: CreateNetworkButton, CreateNetwork returned NULL\n");
+        return 1;
+    }
+    else {
+        DestroyNetwork(ocr->network);
+        ocr->network = tmp;
+    }
+    return 0;
+}
+
 int TrainButton(struct OCR* ocr){
     if (ocr == NULL){
         printf("Error: TrainButton, invalid argument \n");

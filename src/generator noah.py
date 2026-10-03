@@ -1,3 +1,13 @@
+"""
+!!! README !!!
+This part of the code was entirely created with AI.
+AI was the best choice to code this part because I had to test and adjust a lot of parameters to generate a good database:
+Namely the size of the font, the blur, the type of font, the boldness, the noise, the rotation and the decay to the center of the characters.
+
+Having to recode a new generator every time I realize that my current database doesn't train the network correctly would have been
+a major loss of time in addition of being completely out of the goal of this project
+"""
+
 import os
 import random
 from PIL import Image, ImageDraw, ImageFont

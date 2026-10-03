@@ -87,7 +87,8 @@ struct Settings* CreateDefaultSettings(){
     struct Settings* settings = malloc(sizeof(struct Settings));
     *settings = (struct Settings){
         .sudokuPath = {0},
-        .networkPath = {0},
+        .networkPath = DEFAULT_NETWORK_PATH,
+        .displayDebugInfo = DEFAULT_DEBUG_INFO,
         .sudokuTexture = NULL,
         .trainingCycleCount = DEFAULT_TRAINING_CYCLE_COUNT,
         .learningRate = DEFAULT_LEARNING_RATE,
@@ -108,7 +109,7 @@ struct OCR* CreateOCR(){
     struct OCR* ocr = malloc(sizeof(struct OCR));
     ocr->settings = CreateDefaultSettings();
     ocr->sudoku = CreateEmptySudoku();
-    ocr->network = NULL; // no network at the beginning, we need to either create it or load it
+    ocr->network = CreateNetwork(DEFAULT_LEARNING_RATE, DEFAULT_LAYER_COUNT, (int[])DEFAULT_NEURONS_PER_LAYER, NULL, NULL);
     return ocr;
 }
 
@@ -122,45 +123,35 @@ int GuiUpdate(struct nk_context* ctx, struct OCR* ocr){
     if (nk_begin(
             ctx,
             "OCR Settings",
-            nk_rect(50, 50, 300, 200),
+            nk_rect(50, 50, 420, 430),
             NK_WINDOW_BORDER |
             NK_WINDOW_MOVABLE |
             NK_WINDOW_TITLE))
     {
+        //NETWORK
+        nk_layout_row_dynamic(ctx, 25, 1);
+        nk_label(ctx, "Neural Network", NK_TEXT_LEFT);
+
+        nk_layout_row_dynamic(ctx, 30, 2);
+
+        if (nk_button_label(ctx, "Create")){
+            printf("Creating new network...\n");
+            errorCode = CreateNetworkButton(ocr);
+            if (errorCode != 0){
+                error = 1;
+                printf("Error: GuiUpdate, CreateNetworkButton returned an error\n");
+            }
+        }
+        if (nk_button_label(ctx, "Load")){
+            printf("Loading Neural Network...\n");
+            errorCode = LoadNetworkButton(ocr);
+            if (errorCode != 0){
+                error = 1;
+                printf("Error: GuiUpdate, LoadNetworkButton returned an error\n");
+            }
+        }
         nk_layout_row_dynamic(ctx, 30, 1);
-
-        nk_label(ctx, "OCR Settings", NK_TEXT_LEFT);
-        if (nk_button_label(ctx, "create network")){
-            printf("creating new OCR...\n");
-            struct Settings* settings = ocr->settings;
-            struct Network* tmp = CreateNetwork(settings->learningRate, settings->layerCount, settings->neuronsPerLayer, NULL, NULL);
-            if (tmp == NULL){
-                error = 1;
-                printf("Error: GuiUpdate, LoadNetwork returned NULL\n");
-            }
-            else {
-                DestroyNetwork(ocr->network);
-                ocr->network = tmp;
-            }
-        }
-
-        if (nk_button_label(ctx, "solve sudoku")){
-            printf("Solving Sudoku...\n");
-            errorCode = SolveSudoku(ocr);
-            if (errorCode != 0){
-                error = 1;
-                printf("Error: GuiUpdate, SolveSudoku returned an error\n");
-            }
-        }
-        if (nk_button_label(ctx, "train")){
-            printf("Training OCR...\n");
-            errorCode = TrainButton(ocr);
-            if (errorCode != 0){
-                error = 1;
-                printf("Error non blocking: GuiUpdate, TrainButton returned an error\n");
-            }
-        }
-        if (nk_button_label(ctx, "save")){
+        if (nk_button_label(ctx, "Save Network")){
             printf("Saving Neural Network...\n");
             errorCode = SaveNetwork(ocr->network, ocr->settings->networkPath);
             if (errorCode != 0){
@@ -168,25 +159,61 @@ int GuiUpdate(struct nk_context* ctx, struct OCR* ocr){
                 printf("Error: GuiUpdate, SaveNetwork returned an error\n");
             }
         }
-        if (nk_button_label(ctx, "load")){
-            printf("loading Neural Network...\n");
-            struct Network* tmp = LoadNetwork(ocr->settings->networkPath);
-            if (tmp == NULL){
-                error = 1;
-                printf("Error: GuiUpdate, LoadNetwork returned NULL\n");
-            }
-            else {
-                DestroyNetwork(ocr->network);
-                ocr->network = tmp;
-            }
-        }
+        // NETWORK PATH
+
+        nk_layout_row_dynamic(ctx, 20, 1);
+        nk_label(ctx, "Network path", NK_TEXT_LEFT);
+
+        nk_layout_row_dynamic(ctx, 30, 1);
 
         nk_edit_string_zero_terminated(
             ctx,
             NK_EDIT_FIELD,
             ocr->settings->networkPath,
             NETWORK_PATH_BUFFER_SIZE,
-            nk_filter_float
+            nk_filter_default
+        );
+
+        //TRAINING
+        nk_layout_row_dynamic(ctx, 25, 1);
+        nk_label(ctx, "Training", NK_TEXT_LEFT);
+
+        nk_layout_row_dynamic(ctx, 35, 1);
+
+        if (nk_button_label(ctx, "Train OCR")){
+            printf("Training OCR...\n");
+            errorCode = TrainButton(ocr);
+            if (errorCode != 0){
+                error = 1;
+                printf("Error: GuiUpdate, TrainButton returned an error\n");
+            }
+        }
+
+        //SUDOKU
+        nk_layout_row_dynamic(ctx, 25, 1);
+        nk_label(ctx, "Sudoku", NK_TEXT_LEFT);
+
+        nk_layout_row_dynamic(ctx, 35, 1);
+
+        if (nk_button_label(ctx, "Solve Sudoku")){
+            printf("Solving Sudoku...\n");
+            errorCode = SolveSudoku(ocr);
+            if (errorCode != 0){
+                error = 1;
+                printf("Error: GuiUpdate, SolveSudoku returned an error\n");
+            }
+        }
+
+        //OPTIONS
+        nk_layout_row_dynamic(ctx, 25, 1);
+        nk_label(ctx, "Options", NK_TEXT_LEFT);
+
+        nk_layout_row_dynamic(ctx, 25, 1);
+
+        nk_checkbox_label(
+            ctx,
+            "Display debug info",
+            &ocr->settings->displayDebugInfo
         );
     }
     else {
