@@ -34,10 +34,16 @@ struct Settings {
     size_t trainingCycleCount;
     double learningRate;
     size_t layerCount;
-    int neuronsPerLayer[MAXIMUM_LAYER_COUNT];
+    char neuronsPerLayer[MAXIMUM_LAYER_COUNT][8];
+};
+
+struct Info {
+    double correctCounter;
+    double counter;
 };
 
 struct OCR {
+    struct Info* info;
     struct Settings* settings;
     struct Sudoku* sudoku;
     struct Network* network;

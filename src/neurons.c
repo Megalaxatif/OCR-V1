@@ -11,9 +11,6 @@
 #include "header/settings.h"
 #include "header/ocr.h"
 
-double correctCounter = 0;
-double counter = 0;
-
 struct Layer* CreateLayer(size_t currentLayerNeuronCount, size_t nextLayerNeuronCount, struct Mat* weights, struct Mat* biases){
     if (currentLayerNeuronCount <= 0 || nextLayerNeuronCount <= 0){
         printf("Error: CreateLayer, neuronCounts must be > 0\n");
@@ -71,9 +68,9 @@ struct Network* CreateNetwork(double learningRate, size_t layerCount, int* neuro
     }
 
     struct Network* network = malloc(sizeof(struct Network));
+    network->layers = calloc(layerCount,sizeof(struct Layer*));
     network->layerCount = layerCount;
     network->learningRate = learningRate;
-    network->layers = malloc(layerCount*sizeof(struct Layer*));
 
     for(size_t i = 0; i < layerCount-1; i++){
         struct Mat* weight = cond ? weights[i] : NULL;
@@ -84,6 +81,7 @@ struct Network* CreateNetwork(double learningRate, size_t layerCount, int* neuro
         struct Layer* layer = CreateLayer(currentLayerNeuronCount, nextLayerNeuronCount, weight, bias);
         if (layer == NULL){
             printf("Error: CreateNetwork, CreateLayer inside the loop returned NULL\n");
+            DestroyNetwork(network);
             return NULL;
         }
         network->layers[i] = layer;
@@ -93,6 +91,7 @@ struct Network* CreateNetwork(double learningRate, size_t layerCount, int* neuro
     struct Layer* layer = CreateLayer(lastLayerNeuronCount, 1, NULL, NULL); // final layer (no weights nor biases) we can put any number as second argument
     if (layer == NULL){
         printf("Error: CreateNetwork, CreateLayer outside the loop returned NULL\n");
+        DestroyNetwork(network);
         return NULL;
     }
     network->layers[layerCount-1] = layer;
@@ -192,11 +191,12 @@ struct Mat** GetAnswer10(){
     return answer10;
 }
 
-int Train(struct Network* network, char** sample, size_t sampleSize, struct Mat* answer[]){
-    if (sampleSize < 1||network == NULL || sample == NULL || answer == NULL){
+int Train(struct OCR* ocr, char** sample, size_t sampleSize, struct Mat* answer[]){
+    if (sampleSize < 1||ocr == NULL || sample == NULL || answer == NULL){
         printf("Error: Train, invalid arguments\n");
         return 1;
     }
+    struct Network* network = ocr->network;
     if (network->layerCount < 3){
         printf("Error: Train, invalid layerCount in the network structure. You must use at least 3 layers\n");
         return 2;
@@ -214,13 +214,13 @@ int Train(struct Network* network, char** sample, size_t sampleSize, struct Mat*
             errorCode = 4;
             goto clear;
         }
-        counter++;
+        ocr->info->counter++;
         if ((size_t)guessedDigit == k){
-            correctCounter++;
+            ocr->info->correctCounter++;
             printf("hit  | ");
         }
         else printf("miss | ");
-        printf("%s vs %d | SCORE: %f\n", sample[k], guessedDigit, correctCounter/counter);
+        printf("%s vs %d | SCORE: %f\n", sample[k], guessedDigit, ocr->info->correctCounter/ocr->info->counter);
 
         // BACKPROBAGATION----------------
         // error  of the last layer

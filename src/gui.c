@@ -1,7 +1,57 @@
+#include "header/init.h"
 #include "header/math.h"
 #include "header/neurons.h"
 #include "header/files.h"
 #include "header/ocr.h"
+#include "header/settings.h"
+#include <stdio.h>
+#include <string.h>
+
+void LearningRateInterface(struct OCR* ocr, struct nk_context* ctx){
+    char str[64] = {0};
+    double learningRate = ocr->network->learningRate;
+    snprintf(str, sizeof(str), "learning rate: %.3f", learningRate);
+    nk_label(ctx, str, NK_TEXT_LEFT);
+
+    float sliderValue = (float)learningRate;
+    nk_slider_float(ctx, 0.001, &sliderValue, 0.1, 0.001);
+    ocr->network->learningRate = (double)sliderValue;
+}
+
+void NeuronsPerLayerInterface(struct OCR* ocr, struct nk_context* ctx){
+    size_t layerCount = ocr->settings->layerCount;
+    nk_layout_row_dynamic(ctx, 25, 2);
+
+    if (nk_button_label(ctx, "Add hidden layer")){
+        if (layerCount + 1 <= MAXIMUM_LAYER_COUNT){
+            // shift the output layer to the right
+            strcpy(ocr->settings->neuronsPerLayer[layerCount], ocr->settings->neuronsPerLayer[layerCount - 1]);
+            strcpy(ocr->settings->neuronsPerLayer[layerCount - 1], "0");
+            ocr->settings->layerCount ++;
+        }
+    }
+    if (nk_button_label(ctx, "Remove hidden layer")){
+        if(layerCount - 1 >= DEFAULT_LAYER_COUNT){
+            // shift the output layer to the left
+            strcpy(ocr->settings->neuronsPerLayer[layerCount - 2], ocr->settings->neuronsPerLayer[layerCount-1]);
+            ocr->settings->layerCount --;
+        }
+    }
+    nk_layout_row_dynamic(ctx, 25, 2);
+    for(size_t i = 1; i < ocr->settings->layerCount-1; i++){ // we don't want the user to change the neuron number of the first and the last layer
+        char str[32] = {0};
+        snprintf(str, sizeof(str), "Hidden layer %ld", i);
+        nk_label(ctx, str, NK_TEXT_LEFT);
+        char* buffer = ocr->settings->neuronsPerLayer[i];
+        nk_edit_string_zero_terminated(
+            ctx,
+            NK_EDIT_FIELD,
+            buffer,
+            sizeof(buffer),
+            nk_filter_decimal
+        );
+    }
+}
 
 int LoadNetworkButton(struct OCR* ocr){
     if (ocr == NULL){
@@ -26,7 +76,15 @@ int CreateNetworkButton(struct OCR* ocr){
         return 1;
     }
     struct Settings* settings = ocr->settings;
-    struct Network* tmp = CreateNetwork(settings->learningRate, settings->layerCount, settings->neuronsPerLayer, NULL, NULL);
+
+    // convert the string array to an int array
+    int neuronsPerLayer[MAXIMUM_LAYER_COUNT] = {0};
+    for(size_t i = 0; i < settings->layerCount; i++){
+        neuronsPerLayer[i] = atoi(settings->neuronsPerLayer[i]);
+        printf("%d ", neuronsPerLayer[i]);
+    }
+    printf("\n");
+    struct Network* tmp = CreateNetwork(settings->learningRate, settings->layerCount, neuronsPerLayer, NULL, NULL);
     if (tmp == NULL){
         printf("Error: CreateNetworkButton, CreateNetwork returned NULL\n");
         return 1;
@@ -43,11 +101,11 @@ int TrainButton(struct OCR* ocr){
         printf("Error: TrainButton, invalid argument \n");
         return 1;
     }
-    if (ocr->network == NULL){
-        printf("Error non blocking: TrainButton, no network to train\n");
-        return 1;
-    }
     // TODO: do this in another processus
+
+    ocr->info->correctCounter = 0;
+    ocr->info->counter = 0;
+
     int errorCode = 0;
     struct Mat** answer10 = NULL;
     char*** files = NULL;
@@ -77,7 +135,7 @@ int TrainButton(struct OCR* ocr){
             goto cleanup;
         }
         // train with the sample
-        errorCode = Train(ocr->network, sample10, 10, answer10);
+        errorCode = Train(ocr, sample10, 10, answer10);
         if (errorCode != 0){
             printf("Error: ..., Train returned %d\n", errorCode);
             goto cleanup;

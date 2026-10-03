@@ -2,6 +2,7 @@
 #include "header/settings.h"
 #include "header/gui.h"
 #include "header/neurons.h"
+#include <SDL2/SDL_stdinc.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -71,18 +72,6 @@ void DestroySettings(struct Settings* settings){
     free(settings);
 }
 
-void DestroyOCR(struct OCR* ocr){
-    printf("DESTROY OCR\n");
-    if (ocr == NULL){
-        printf("WARNING: DestroyOCR, no ocr to destroy (ocr is NULL)\n");
-        return;
-    }
-    DestroySettings(ocr->settings);
-    DestroySudoku(ocr->sudoku);
-    DestroyNetwork(ocr->network);
-    free(ocr);
-}
-
 struct Settings* CreateDefaultSettings(){
     struct Settings* settings = malloc(sizeof(struct Settings));
     *settings = (struct Settings){
@@ -93,10 +82,25 @@ struct Settings* CreateDefaultSettings(){
         .trainingCycleCount = DEFAULT_TRAINING_CYCLE_COUNT,
         .learningRate = DEFAULT_LEARNING_RATE,
         .layerCount = DEFAULT_LAYER_COUNT,
-        .neuronsPerLayer = DEFAULT_NEURONS_PER_LAYER
+        .neuronsPerLayer = {{0}}
     };
-
+    // convert the int array into a str array
+    int neuronsPerLayer[] = DEFAULT_NEURONS_PER_LAYER;
+    for (int i = 0; i < DEFAULT_LAYER_COUNT; i++){
+        snprintf(settings->neuronsPerLayer[i], sizeof(settings->neuronsPerLayer[i]), "%d", neuronsPerLayer[i]);
+    }
     return settings;
+}
+
+struct Info* CreateInfo(){
+    struct Info* info = malloc(sizeof(struct Info));
+    info->correctCounter = 0;
+    info->counter = 0;
+    return info;
+}
+
+void DestroyInfo(struct Info* info){
+    free(info);
 }
 
 struct Sudoku* CreateEmptySudoku(){
@@ -107,10 +111,24 @@ struct Sudoku* CreateEmptySudoku(){
 
 struct OCR* CreateOCR(){
     struct OCR* ocr = malloc(sizeof(struct OCR));
+    ocr->info = CreateInfo();
     ocr->settings = CreateDefaultSettings();
     ocr->sudoku = CreateEmptySudoku();
     ocr->network = CreateNetwork(DEFAULT_LEARNING_RATE, DEFAULT_LAYER_COUNT, (int[])DEFAULT_NEURONS_PER_LAYER, NULL, NULL);
     return ocr;
+}
+
+void DestroyOCR(struct OCR* ocr){
+    printf("DESTROY OCR\n");
+    if (ocr == NULL){
+        printf("WARNING: DestroyOCR, no ocr to destroy (ocr is NULL)\n");
+        return;
+    }
+    DestroyInfo(ocr->info);
+    DestroySettings(ocr->settings);
+    DestroySudoku(ocr->sudoku);
+    DestroyNetwork(ocr->network);
+    free(ocr);
 }
 
 int GuiUpdate(struct nk_context* ctx, struct OCR* ocr){
@@ -161,10 +179,7 @@ int GuiUpdate(struct nk_context* ctx, struct OCR* ocr){
         }
         // NETWORK PATH
 
-        nk_layout_row_dynamic(ctx, 20, 1);
         nk_label(ctx, "Network path", NK_TEXT_LEFT);
-
-        nk_layout_row_dynamic(ctx, 30, 1);
 
         nk_edit_string_zero_terminated(
             ctx,
@@ -180,8 +195,8 @@ int GuiUpdate(struct nk_context* ctx, struct OCR* ocr){
 
         nk_layout_row_dynamic(ctx, 35, 1);
 
-        if (nk_button_label(ctx, "Train OCR")){
-            printf("Training OCR...\n");
+        if (nk_button_label(ctx, "Train Network")){
+            printf("Training Network...\n");
             errorCode = TrainButton(ocr);
             if (errorCode != 0){
                 error = 1;
@@ -207,14 +222,11 @@ int GuiUpdate(struct nk_context* ctx, struct OCR* ocr){
         //OPTIONS
         nk_layout_row_dynamic(ctx, 25, 1);
         nk_label(ctx, "Options", NK_TEXT_LEFT);
+        nk_checkbox_label(ctx, "Display debug info", &ocr->settings->displayDebugInfo);
 
-        nk_layout_row_dynamic(ctx, 25, 1);
+        LearningRateInterface(ocr, ctx);
+        NeuronsPerLayerInterface(ocr, ctx);
 
-        nk_checkbox_label(
-            ctx,
-            "Display debug info",
-            &ocr->settings->displayDebugInfo
-        );
     }
     else {
         error = 1;

@@ -12,7 +12,7 @@ struct Network* CreateNetwork(double learningRate, size_t layerCount, int* neuro
 void DestroyNetwork(struct Network* network);
 struct Mat** GetAnswer10(); // get the list of answer matrix for a training of 1 image on each digit from 0 to 9
 int GetGuessedDigit(struct Network* network);
-int Train(struct Network* network, char** sample, size_t sampleSize, struct Mat* answer[]);
+int Train(struct OCR* ocr, char** sample, size_t sampleSize, struct Mat* answer[]);
 int SolveGrayScale(struct Network* network, struct Mat* input);
 int* SolveGrayScales(struct Mat** grayScales, size_t grayScaleCount, struct Network* network);
 int SolveSudoku(struct OCR* ocr);
