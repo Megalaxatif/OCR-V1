@@ -511,7 +511,6 @@ struct Mat** ConvertTexturesToGrayScale(SDL_Texture** textures, size_t textureCo
         SDL_RenderReadPixels(renderer, NULL, SDL_PIXELFORMAT_RGBA8888, rgbaSurface->pixels, rgbaSurface->pitch);
 
         grayScales[i] = GetForwardPassGrayScaleMatrix(rgbaSurface);
-        //PrintDigitGrayScales(grayScales + i, 1);
 
         if (grayScales[i] == NULL){
             printf("Error: ConvertTexturesToGrayScale, GetForwardPassGrayScaleMatrix returned NULL\n");

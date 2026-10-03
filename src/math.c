@@ -117,13 +117,30 @@ void MatDestroy(struct Mat* mat){
     matCount--;
 }
 
-struct Mat* MatCopy(struct Mat* mat){
+struct Mat* MatClone(struct Mat* mat){
     if (mat == NULL){
-        printf("Error: MatCopy, mat is NULL\n");
+        printf("Error: MatClone, mat is NULL\n");
         return NULL;
     }
     struct Mat* copy = MatCreate(mat->row, mat->col, mat->data, NULL);
     return copy;
+}
+
+int MatCopy(struct Mat* src, struct Mat* dest){
+    if (src == NULL || dest == NULL){
+        printf("Error: MatCopy, invalid argument\n");
+        return 1;
+    }
+    if (src->col != dest->col || src->row != dest->row){
+        printf("Error: MatCopy, the matrices don't have the same dimentions\n");
+        return 1;
+    }
+    for (size_t y = 0; y < src->row; y++){
+        for (size_t x = 0; x < src->col; x++){
+            dest->data[y][x] = src->data[y][x];
+        }
+    }
+    return 0;
 }
 
 struct Mat* MatTranspose(struct Mat* mat){

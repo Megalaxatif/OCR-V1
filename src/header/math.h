@@ -11,7 +11,8 @@ struct Mat{
 };
 
 struct Mat* MatCreate(size_t row, size_t col, double* data[], void (*f)(struct Mat* mat)); // create a matrix with the given rows and columns and initialise it with the given data array or with an activation function
-struct Mat* MatCopy(struct Mat* mat); // create a copy of mat and return it
+struct Mat* MatClone(struct Mat* mat); // create a clone of mat and return it
+int MatCopy(struct Mat* src, struct Mat* dest); // copy the data of matrix src into dest, the two matrices must have the same size
 struct Mat* MatTranspose(struct Mat* mat); // create the transpose matrix of mat and return it
 void MatDestroy(struct Mat* mat);
 void MatPrint(struct Mat* mat);

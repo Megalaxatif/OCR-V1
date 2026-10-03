@@ -10,6 +10,7 @@
 #include <stdlib.h>
 #include "header/settings.h"
 #include "header/ocr.h"
+
 double correctCounter = 0;
 double counter = 0;
 
@@ -37,23 +38,77 @@ struct Layer* CreateLayer(size_t currentLayerNeuronCount, size_t nextLayerNeuron
 void DestroyLayer(struct Layer* layer){
     if (layer == NULL)
         return;
-    if (layer->preActivation != NULL) {
-        // printf("layer preActivation addr: %p\n", layer->preActivation);
+    if (layer->preActivation != NULL)
         MatDestroy(layer->preActivation);
-    }
-    if (layer->activation != NULL) {
-        // printf("layer activation addr: %p\n", layer->activation);
+    if (layer->activation != NULL)
         MatDestroy(layer->activation);
-    }
-    if (layer->biases != NULL) {
-        // printf("layer biases addr: %p\n", layer->biases);
+    if (layer->biases != NULL)
         MatDestroy(layer->biases);
-    }
-    if (layer->weights != NULL) {
-        // printf("layer weights addr: %p\n", layer->weights);
+    if (layer->weights != NULL)
         MatDestroy(layer->weights);
-    }
     free(layer);
+}
+
+struct Network* CreateNetwork(double learningRate, size_t layerCount, int* neuronsPerLayer,  struct Mat* weights[], struct Mat* biases[]){
+    // NOTE if weights and biases are defined, they both are layerCount-1 elements long because the weights
+    // and biases of the last layer are not used in any computation so we don't need to store them
+    int cond = weights != NULL && biases != NULL;
+    if (learningRate <= 0){
+        printf("Error : CreateNetork, you need to have a learning Rate > 0\n");
+        return NULL;
+    }
+    if (layerCount < DEFAULT_LAYER_COUNT){
+        printf("Error : CreateNetwork, you need to have at least %d layers in the network\n", DEFAULT_LAYER_COUNT);
+        return NULL;
+    }
+    if (cond && neuronsPerLayer != NULL){
+        printf("WARNING: CreateNetwork, no need to use the argument neuronsPerLayer for networks initialized with already existing weights and biases\n");
+        return NULL;
+    }
+    if (!cond && neuronsPerLayer == NULL){
+        printf("Error: CreateNetwork, neuronsPerLayer is NULL\n");
+        return NULL;
+    }
+
+    struct Network* network = malloc(sizeof(struct Network));
+    network->layerCount = layerCount;
+    network->learningRate = learningRate;
+    network->layers = malloc(layerCount*sizeof(struct Layer*));
+
+    for(size_t i = 0; i < layerCount-1; i++){
+        struct Mat* weight = cond ? weights[i] : NULL;
+        struct Mat* bias = cond ? biases[i] : NULL;
+        size_t nextLayerNeuronCount = cond ? weights[i]->row : (size_t)neuronsPerLayer[i+1];
+        size_t currentLayerNeuronCount = cond ? weights[i]->col : (size_t)neuronsPerLayer[i];
+
+        struct Layer* layer = CreateLayer(currentLayerNeuronCount, nextLayerNeuronCount, weight, bias);
+        if (layer == NULL){
+            printf("Error: CreateNetwork, CreateLayer inside the loop returned NULL\n");
+            return NULL;
+        }
+        network->layers[i] = layer;
+    }
+    size_t lastLayerNeuronCount = cond ? weights[layerCount-2]->col : (size_t)neuronsPerLayer[layerCount-1];
+
+    struct Layer* layer = CreateLayer(lastLayerNeuronCount, 1, NULL, NULL); // final layer (no weights nor biases) we can put any number as second argument
+    if (layer == NULL){
+        printf("Error: CreateNetwork, CreateLayer outside the loop returned NULL\n");
+        return NULL;
+    }
+    network->layers[layerCount-1] = layer;
+    return network;
+}
+
+void DestroyNetwork(struct Network* network){
+    printf("DESTROY NETWORK\n");
+    if (network == NULL) {
+        printf("WARNING: DestroyNetwork, no network to destroy (network is NULL)\n");
+        return;
+    }
+    for(size_t i = 0; i < network->layerCount; i++)
+        DestroyLayer(network->layers[i]);
+    free(network->layers);
+    free(network);
 }
 
 struct Mat* ComputePreActivation(struct Layer* layer, struct Layer* nextLayer){
@@ -101,22 +156,6 @@ int ComputeActivation(struct Layer* layer, struct Layer* nextLayer){ // calculat
     return 0;
 }
 
-int ForwardPass(struct Network* network, struct Mat* input){
-    input = InvertForwardPassGrayScaleMatrix(input); // needed if we are using black on white training images
-    MatDestroy(network->layers[0]->activation);
-    network->layers[0]->activation = input;
-    size_t i = 0;
-    while(i < network->layerCount - 1){
-        int errorCode = ComputeActivation(network->layers[i], network->layers[i+1]);
-        if (errorCode != 0){
-            printf("Error: ForwardPass, ComputeActivation between layer %ld and %ld failed and returned %d\n", i, i+1, errorCode);
-            return 1;
-        }
-        i++;
-    }
-    return 0;
-}
-
 int GetGuessedDigit(struct Network* network){
     if (network == NULL){
         printf("Error: GetGuessedDigitIndex, invalid argument\n");
@@ -135,6 +174,24 @@ int GetGuessedDigit(struct Network* network){
     return biggestIndex; // the guessed digit corresponds to this index
 }
 
+struct Mat** GetAnswer10(){
+    struct Mat** answer10 = malloc(10*sizeof(struct Mat*));
+    for(int i = 0; i < 10; i++){
+        answer10[i] = MatCreate(10, 1, NULL, NULL);
+        if (answer10[i] == NULL){
+            printf("Error: GetAnswer10, MatCreate returned NULL \n");
+            for (int j = 0; j < i; j++)
+                MatDestroy(answer10[j]);
+            free(answer10);
+            return NULL;
+        }
+        for(int j = 0; j < 10; j++){
+            answer10[i]->data[j][0] = i==j ? 1 : 0;
+        }
+    }
+    return answer10;
+}
+
 int Train(struct Network* network, char** sample, size_t sampleSize, struct Mat* answer[]){
     if (sampleSize < 1||network == NULL || sample == NULL || answer == NULL){
         printf("Error: Train, invalid arguments\n");
@@ -150,12 +207,9 @@ int Train(struct Network* network, char** sample, size_t sampleSize, struct Mat*
     struct Mat** weightGradiants = calloc(network->layerCount-1, sizeof(struct Mat*));   // weights gradiant list for each layer
     struct Mat** biasesGradiants = calloc(network->layerCount-1, sizeof(struct Mat*));   // biases gradiant list for each layer
 
-    MatDestroy(network->layers[0]->activation); // destroy the first activation
-    network->layers[0]->activation = NULL;
-
     for(size_t k = 0; k < sampleSize; k++){
 
-        int guessedDigit = SolveImage(sample[k], network, 1);
+        int guessedDigit = SolveImage(sample[k], network);
         if (guessedDigit < 0){
             errorCode = 4;
             goto clear;
@@ -182,9 +236,8 @@ int Train(struct Network* network, char** sample, size_t sampleSize, struct Mat*
             struct Mat* transpose = MatTranspose(previousLayer->activation);
             struct Mat* gradiant = MatMult(delta, transpose);
             MatDestroy(transpose);
-            if (weightGradiants[i-1] == NULL){
+            if (weightGradiants[i-1] == NULL)
                 weightGradiants[i-1] = gradiant;
-            }
             else{
                 MatAddInternal(weightGradiants[i-1], gradiant);
                 MatDestroy(gradiant);
@@ -192,7 +245,7 @@ int Train(struct Network* network, char** sample, size_t sampleSize, struct Mat*
 
             // gradiant of the biases : biases = biases + delta
             if (biasesGradiants[i-1] == NULL)
-                biasesGradiants[i-1] = MatCopy(delta);
+                biasesGradiants[i-1] = MatClone(delta);
             else
                 MatAddInternal(biasesGradiants[i-1], delta);
 
@@ -213,9 +266,6 @@ int Train(struct Network* network, char** sample, size_t sampleSize, struct Mat*
             i--;
         }
         MatDestroy(delta); // destroy the last delta
-        // important
-        MatDestroy(network->layers[0]->activation);
-        network->layers[0]->activation = NULL;
     }
 
     // apply the gradiant to all layers at the end of the training
@@ -235,103 +285,19 @@ int Train(struct Network* network, char** sample, size_t sampleSize, struct Mat*
     return errorCode;
 }
 
-struct Mat** GetAnswer10(){
-    struct Mat** answer10 = malloc(10*sizeof(struct Mat*));
-    for(int i = 0; i < 10; i++){
-        answer10[i] = MatCreate(10, 1, NULL, NULL);
-        if (answer10[i] == NULL){
-            printf("Error: GetAnswer10, MatCreate returned NULL \n");
-            for (int j = 0; j < i; j++)
-                MatDestroy(answer10[j]);
-            free(answer10);
-            return NULL;
+int SolveGrayScale(struct Network* network, struct Mat* input){
+    input = InvertForwardPassGrayScaleMatrix(input); // needed if we are using black on white training images
+    MatCopy(input, network->layers[0]->activation); // copy the input in the activation of the first layer
+    size_t i = 0;
+    while(i < network->layerCount - 1){
+        int errorCode = ComputeActivation(network->layers[i], network->layers[i+1]);
+        if (errorCode != 0){
+            printf("Error: SolveGrayScale, ComputeActivation between layer %ld and %ld failed and returned %d\n", i, i+1, errorCode);
+            return 1;
         }
-        for(int j = 0; j < 10; j++){
-            answer10[i]->data[j][0] = i==j ? 1 : 0;
-        }
+        i++;
     }
-    return answer10;
-}
-
-struct Network* CreateNetwork(double learningRate, size_t layerCount, int* neuronsPerLayer,  struct Mat* weights[], struct Mat* biases[]){
-    // NOTE if weights and biases are defined, they both are layerCount-1 elements long because the weights
-    // and biases of the last layer are not used in any computation so we don't need to store them
-    int cond = weights != NULL && biases != NULL;
-    if (learningRate <= 0){
-        printf("Error : CreateNetork, you need to have a learning Rate > 0\n");
-        return NULL;
-    }
-    if (layerCount < DEFAULT_LAYER_COUNT){
-        printf("Error : CreateNetwork, you need to have at least %d layers in the network\n", DEFAULT_LAYER_COUNT);
-        return NULL;
-    }
-    if (cond && neuronsPerLayer != NULL){
-        printf("WARNING: CreateNetwork, no need to use the argument neuronsPerLayer for networks initialized with already existing weights and biases\n");
-        return NULL;
-    }
-    if (!cond && neuronsPerLayer == NULL){
-        printf("Error: CreateNetwork, neuronsPerLayer is NULL\n");
-        return NULL;
-    }
-
-    struct Network* network = malloc(sizeof(struct Network));
-    network->layerCount = layerCount;
-    network->learningRate = learningRate;
-    network->layers = malloc(layerCount*sizeof(struct Layer*));
-
-    for(size_t i = 0; i < layerCount-1; i++){
-        struct Mat* weight = cond ? weights[i] : NULL;
-        struct Mat* bias = cond ? biases[i] : NULL;
-        size_t nextLayerNeuronCount = cond ? weights[i]->row : (size_t)neuronsPerLayer[i+1];
-        size_t currentLayerNeuronCount = cond ? weights[i]->col : (size_t)neuronsPerLayer[i];
-
-        network->layers[i] = CreateLayer(currentLayerNeuronCount, nextLayerNeuronCount, weight, bias);
-        if (network->layers[i] == NULL){
-            printf("Error: CreateNetwork, CreateLayer inside the loop returned NULL\n");
-            return NULL;
-        }
-    }
-    size_t lastLayerNeuronCount = cond ? weights[layerCount-2]->col : (size_t)neuronsPerLayer[layerCount-1];
-    network->layers[layerCount-1] = CreateLayer(lastLayerNeuronCount, 1, NULL, NULL); // final layer (no weights nor biases) we can put any number as second argument
-
-    if (network->layers[layerCount-1] == NULL){
-        printf("Error: CreateNetwork, CreateLayer outside the loop returned NULL\n");
-        return NULL;
-    }
-    return network;
-}
-
-void DestroyNetwork(struct Network* network){
-    printf("DESTROY NETWORK\n");
-    if (network == NULL) {
-        printf("WARNING: DestroyNetwork, no network to destroy (network is NULL)\n");
-        return;
-    }
-    for(size_t i = 0; i < network->layerCount; i++)
-        DestroyLayer(network->layers[i]);
-    free(network->layers);
-    free(network);
-}
-
-void PrintDigitGrayScales(struct Mat** digitGrayScale, size_t grayScaleCount){
-    if (digitGrayScale == NULL){
-        printf("Error: MatPrint, matrix pointer is NULL\n");
-        return;
-    }
-    for(size_t i = 0; i < grayScaleCount; i++){
-        struct Mat* currentGrayScale = digitGrayScale[i];
-        if (currentGrayScale->col != 1 || currentGrayScale->row != NETWORK_IMG_SIZE*NETWORK_IMG_SIZE){
-            printf("Error: PrintDigitGrayScale, the matrix given doesn't have valid dimensions for a digit grayscale");
-            return;
-        }
-        for(size_t i = 0; i < NETWORK_IMG_SIZE; i++){
-            for(size_t j = 0; j < NETWORK_IMG_SIZE; j++){
-                printf("%.1f ", currentGrayScale->data[i*NETWORK_IMG_SIZE+j][0]);
-            }
-            printf("\n");
-        }
-        printf("\n");
-    }
+    return 0;
 }
 
 int* SolveGrayScales(struct Mat** grayScales, size_t grayScaleCount, struct Network* network){
@@ -344,10 +310,10 @@ int* SolveGrayScales(struct Mat** grayScales, size_t grayScaleCount, struct Netw
         if (grayScales[i] == NULL)
             digits[i] = -1;
         else {
-            int errorCode = ForwardPass(network, grayScales[i]);
+            int errorCode = SolveGrayScale(network, grayScales[i]);
 
             if (errorCode != 0){
-                printf("Error: SolveGrayScales, ForwardPass returned %d\n", errorCode);
+                printf("Error: SolveGrayScales, SolveGrayScale returned %d\n", errorCode);
                 free(digits);
                 return NULL;
             }
@@ -358,7 +324,7 @@ int* SolveGrayScales(struct Mat** grayScales, size_t grayScaleCount, struct Netw
     return digits;
 }
 
-int SolveImage(char* path, struct Network* network, int isTraining){
+int SolveImage(char* path, struct Network* network){
     SDL_Surface* trainingSurface = IMG_Load(path);
     if (trainingSurface == NULL){
         printf("Error: SolveImage, impossible to load the image at %s\n", path);
@@ -380,16 +346,11 @@ int SolveImage(char* path, struct Network* network, int isTraining){
         return -2;
     }
 
-    int errorCode = ForwardPass(network, grayScale);
-
-    // the network must not delete the first activation matrix if it's training because of backpropagation
-    if (!isTraining){
-        MatDestroy(grayScale);
-        network->layers[0]->activation = NULL;
-    }
+    int errorCode = SolveGrayScale(network, grayScale);
+    MatDestroy(grayScale);
 
     if (errorCode != 0){
-        printf("Error: SolveImage, ForwardPass returned %d\n", errorCode);
+        printf("Error: SolveImage, SolveGrayScale returned %d\n", errorCode);
         return -3;
     }
 
@@ -490,7 +451,7 @@ struct Network* LoadNetwork(char* path){
     }
     FILE* file = fopen(path, "rb");
     if (file == NULL){
-        printf("Error: LoadNetwork, impossible to open the file %s\n", path);
+        printf("Error: LoadNetwork, impossible to open the file \"%s\"\n", path);
         return NULL;
     }
 
@@ -539,7 +500,7 @@ int SaveNetwork(struct Network* network, char* path){
     }
     FILE* file = fopen(path, "wb");
     if (file == NULL){
-        printf("Error: SaveNetwork, impossible to open the file %s\n", path);
+        printf("Error: SaveNetwork, impossible to open the file \"%s\"\n", path);
         return 2;
     }
     if (!fwrite(&network->layerCount, sizeof(size_t), 1, file)){
