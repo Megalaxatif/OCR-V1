@@ -8,7 +8,7 @@
 #include <string.h>
 
 void LearningRateInterface(struct OCR* ocr, struct nk_context* ctx){
-    char str[64] = {0};
+    char str[32] = {0};
     double learningRate = ocr->settings->learningRate;
     snprintf(str, sizeof(str), "learning rate: %.3f", learningRate);
     nk_label(ctx, str, NK_TEXT_LEFT);
@@ -16,6 +16,17 @@ void LearningRateInterface(struct OCR* ocr, struct nk_context* ctx){
     float sliderValue = (float)learningRate;
     nk_slider_float(ctx, 0.001, &sliderValue, 0.1, 0.001);
     ocr->settings->learningRate = (double)sliderValue;
+}
+
+void TrainingCycleInterface(struct OCR* ocr, struct nk_context* ctx){
+    char str[32] = {0};
+    size_t trainingCycleCount = ocr->settings->trainingCycleCount;
+    snprintf(str, sizeof(str), "training cycles: %ld", trainingCycleCount);
+    nk_label(ctx, str, NK_TEXT_LEFT);
+
+    int sliderValue = (int)trainingCycleCount;
+    nk_slider_int(ctx, 1, &sliderValue, 5000, 1);
+    ocr->settings->trainingCycleCount = (size_t)sliderValue;
 }
 
 void NeuronsPerLayerInterface(struct OCR* ocr, struct nk_context* ctx){

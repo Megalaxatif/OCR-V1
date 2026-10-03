@@ -225,8 +225,8 @@ int GuiUpdate(struct nk_context* ctx, struct OCR* ocr){
         nk_checkbox_label(ctx, "Display debug info", &ocr->settings->displayDebugInfo);
 
         LearningRateInterface(ocr, ctx);
+        TrainingCycleInterface(ocr, ctx);
         NeuronsPerLayerInterface(ocr, ctx);
-
     }
     else {
         error = 1;
