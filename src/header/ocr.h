@@ -11,7 +11,6 @@ struct Layer{
 
 struct Network{
     size_t layerCount;
-    double learningRate;
     struct Layer** layers;
 };
 

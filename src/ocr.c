@@ -114,7 +114,7 @@ struct OCR* CreateOCR(){
     ocr->info = CreateInfo();
     ocr->settings = CreateDefaultSettings();
     ocr->sudoku = CreateEmptySudoku();
-    ocr->network = CreateNetwork(DEFAULT_LEARNING_RATE, DEFAULT_LAYER_COUNT, (int[])DEFAULT_NEURONS_PER_LAYER, NULL, NULL);
+    ocr->network = CreateNetwork(DEFAULT_LAYER_COUNT, (int[])DEFAULT_NEURONS_PER_LAYER, NULL, NULL);
     return ocr;
 }
 

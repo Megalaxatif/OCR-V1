@@ -9,13 +9,13 @@
 
 void LearningRateInterface(struct OCR* ocr, struct nk_context* ctx){
     char str[64] = {0};
-    double learningRate = ocr->network->learningRate;
+    double learningRate = ocr->settings->learningRate;
     snprintf(str, sizeof(str), "learning rate: %.3f", learningRate);
     nk_label(ctx, str, NK_TEXT_LEFT);
 
     float sliderValue = (float)learningRate;
     nk_slider_float(ctx, 0.001, &sliderValue, 0.1, 0.001);
-    ocr->network->learningRate = (double)sliderValue;
+    ocr->settings->learningRate = (double)sliderValue;
 }
 
 void NeuronsPerLayerInterface(struct OCR* ocr, struct nk_context* ctx){
@@ -79,12 +79,10 @@ int CreateNetworkButton(struct OCR* ocr){
 
     // convert the string array to an int array
     int neuronsPerLayer[MAXIMUM_LAYER_COUNT] = {0};
-    for(size_t i = 0; i < settings->layerCount; i++){
+    for(size_t i = 0; i < settings->layerCount; i++)
         neuronsPerLayer[i] = atoi(settings->neuronsPerLayer[i]);
-        printf("%d ", neuronsPerLayer[i]);
-    }
-    printf("\n");
-    struct Network* tmp = CreateNetwork(settings->learningRate, settings->layerCount, neuronsPerLayer, NULL, NULL);
+
+    struct Network* tmp = CreateNetwork(settings->layerCount, neuronsPerLayer, NULL, NULL);
     if (tmp == NULL){
         printf("Error: CreateNetworkButton, CreateNetwork returned NULL\n");
         return 1;

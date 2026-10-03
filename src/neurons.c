@@ -46,14 +46,10 @@ void DestroyLayer(struct Layer* layer){
     free(layer);
 }
 
-struct Network* CreateNetwork(double learningRate, size_t layerCount, int* neuronsPerLayer,  struct Mat* weights[], struct Mat* biases[]){
+struct Network* CreateNetwork(size_t layerCount, int* neuronsPerLayer,  struct Mat* weights[], struct Mat* biases[]){
     // NOTE if weights and biases are defined, they both are layerCount-1 elements long because the weights
     // and biases of the last layer are not used in any computation so we don't need to store them
     int cond = weights != NULL && biases != NULL;
-    if (learningRate <= 0){
-        printf("Error : CreateNetork, you need to have a learning Rate > 0\n");
-        return NULL;
-    }
     if (layerCount < DEFAULT_LAYER_COUNT){
         printf("Error : CreateNetwork, you need to have at least %d layers in the network\n", DEFAULT_LAYER_COUNT);
         return NULL;
@@ -70,7 +66,6 @@ struct Network* CreateNetwork(double learningRate, size_t layerCount, int* neuro
     struct Network* network = malloc(sizeof(struct Network));
     network->layers = calloc(layerCount,sizeof(struct Layer*));
     network->layerCount = layerCount;
-    network->learningRate = learningRate;
 
     for(size_t i = 0; i < layerCount-1; i++){
         struct Mat* weight = cond ? weights[i] : NULL;
@@ -271,8 +266,8 @@ int Train(struct OCR* ocr, char** sample, size_t sampleSize, struct Mat* answer[
     // apply the gradiant to all layers at the end of the training
     for(size_t i = 0; i < (network->layerCount)-1; i++){
         struct Layer* currentLayer = network->layers[i];
-        currentLayer->biases = MatSubInternal(currentLayer->biases, MatScalarInternal(biasesGradiants[i], network->learningRate));
-        currentLayer->weights = MatSubInternal(currentLayer->weights, MatScalarInternal(weightGradiants[i], network->learningRate));
+        currentLayer->biases = MatSubInternal(currentLayer->biases, MatScalarInternal(biasesGradiants[i], ocr->settings->learningRate));
+        currentLayer->weights = MatSubInternal(currentLayer->weights, MatScalarInternal(weightGradiants[i], ocr->settings->learningRate));
     }
 
     clear:
@@ -456,15 +451,9 @@ struct Network* LoadNetwork(char* path){
     }
 
     size_t layerCount = 0;
-    double learningRate = 0;
 
     if (!fread(&layerCount, sizeof(size_t), 1, file)){
         printf("Error: LoadNetwork, impossible to read the layerCount number\n");
-        fclose(file);
-        return NULL;
-    }
-    if (!fread(&learningRate, sizeof(double), 1, file)){
-        printf("Error: LoadNetwork, impossible to read the learningRate number\n");
         fclose(file);
         return NULL;
     }
@@ -484,7 +473,7 @@ struct Network* LoadNetwork(char* path){
         }
     }
     fclose(file);
-    struct Network* network = CreateNetwork(learningRate, layerCount, NULL, weights, biases);
+    struct Network* network = CreateNetwork(layerCount, NULL, weights, biases);
     // we don't use the array but we use what they point
     free(weights);
     free(biases);
@@ -507,11 +496,6 @@ int SaveNetwork(struct Network* network, char* path){
         printf("Error: SaveNetwork, impossible to write the layerCount in %s\n", path);
         fclose(file);
         return 3;
-    }
-    if(!fwrite(&network->learningRate, sizeof(double), 1, file)){
-        printf("Error: SaveNetwork, impossible to write the learningRate in %s\n", path);
-        fclose(file);
-        return 4;
     }
 
     for (size_t i = 0; i < network->layerCount-1; i++){ // we don't save the last layer's weights and biases since they are not really used by the network
