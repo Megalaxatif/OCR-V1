@@ -528,7 +528,7 @@ SDL_Surface* ConvertSurfaceToGrayScale(SDL_Surface* surface){
             Uint32 pixel = pixels[index];
             Uint8 r, g, b, a = 0;
             SDL_GetRGBA(pixel, surface->format, &r, &g, &b, &a);
-            double grayCode = 0.299 * r/255.0 + 0.587 * g/255.0 + 0.114 * b/255.0;
+            double grayCode = 0.299 * r/255.0 + 0.587 * g/255.0 + 0.114 * b/255.0; // TODO: find a way to remove the division
             grayCode = grayCode < 0.8 ? 0 : 1; // only two values possible // TODO: put 0.8 in a constant
 
             Uint32 grayPixel = SDL_MapRGBA(surface->format, grayCode*255, grayCode*255, grayCode*255, 255);

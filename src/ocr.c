@@ -258,23 +258,31 @@ int HandleDropedFile(SDL_Event event, struct OCR* ocr){
     if (grayScale == NULL){
         printf("Error: HandleDropedFile, ConvertSurfaceToGrayScale returned NULL\n");
         SDL_free(tmp);
-        SDL_FreeSurface(sudokuSurface);
+        SDL_FreeSurface(convertedSurface);
         return 1;
     }
-    else
-        convertedSurface = grayScale;
+    convertedSurface = grayScale;
 
-    // set the new path
-    strcpy(ocr->settings->sudokuPath, tmp);
-    SDL_free(tmp);
-
+    // rotate the surface
+    SDL_Surface* rotatedSurface = DeskewSurface(convertedSurface);
+    SDL_FreeSurface(convertedSurface);
+    if (rotatedSurface == NULL) {
+        printf("Error: HandleDropedFile, DeskewSurface returned NULL\n");
+        SDL_free(tmp);
+        return 1;
+    }
     // destroy the previous texture
     if (ocr->settings->sudokuTexture != NULL)
         SDL_DestroyTexture(ocr->settings->sudokuTexture);
 
     // set the new texture
-    ocr->settings->sudokuTexture = SDL_CreateTextureFromSurface(renderer, convertedSurface);
-    SDL_FreeSurface(convertedSurface);
+    ocr->settings->sudokuTexture = SDL_CreateTextureFromSurface(renderer, rotatedSurface);
+    SDL_FreeSurface(rotatedSurface);
+
+    // set the new path
+    strcpy(ocr->settings->sudokuPath, tmp);
+    SDL_free(tmp);
+
     printf("file droped : %s\n", ocr->settings->sudokuPath);
 
     return 0;

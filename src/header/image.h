@@ -7,6 +7,9 @@
 int DrawDigitGrayScales(struct Mat** digitGrayScales, SDL_Rect* rects, size_t rectCount, struct Mat* referenceMatrix);
 
 
+SDL_Surface *DeskewSurface(SDL_Surface *grayscale); // rotate the image
+
+
 struct Mat* InvertGrayScaleMatrix(struct Mat* grayScale); // invert a grayScale (black = 0 becomes white = 1)
 
 // produce an array of SDL_Rect corresponding to the dimensions of each horizontal black lines on the grayScale (height is always set to 0), it also ignores little lines
