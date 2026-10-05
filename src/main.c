@@ -1,12 +1,7 @@
 #include "header/init.h"
 #include "header/ocr.h"
-#include <SDL2/SDL_events.h>
-#include <SDL2/SDL_render.h>
-#include <SDL2/SDL_surface.h>
-#include <stdio.h>
-#include <stdlib.h>
+
 #include <time.h>
-#include <stdlib.h>
 
 
 int main(){

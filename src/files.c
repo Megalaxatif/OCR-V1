@@ -1,11 +1,11 @@
 #include "header/files.h"
 #include "header/settings.h"
-#include "header/math.h"
-#include <stdio.h>
-#include <dirent.h>
+
 #include <stdlib.h>
 #include <string.h>
-#include <stdlib.h>
+#include <dirent.h>
+
+
 int GetSample10(char*** sample, char*** files, size_t* fileCount){
     if (sample == NULL || files == NULL || fileCount == NULL){
         printf("Error: GetSample10, invalid argument\n");

@@ -1,15 +1,5 @@
-#include "header/neurons.h"
 #include "header/files.h"
 #include "header/image.h"
-#include "header/math.h"
-#include <SDL2/SDL_image.h>
-#include <SDL2/SDL_pixels.h>
-#include <SDL2/SDL_render.h>
-#include <SDL2/SDL_surface.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include "header/settings.h"
-#include "header/ocr.h"
 
 struct Layer* CreateLayer(size_t currentLayerNeuronCount, size_t nextLayerNeuronCount, struct Mat* weights, struct Mat* biases){
     if (currentLayerNeuronCount <= 0 || nextLayerNeuronCount <= 0){

@@ -3,7 +3,6 @@
 
 #include "header/init.h"
 #include "header/settings.h"
-#include <stdio.h>
 
 // init of the two global variables
 SDL_Renderer* renderer = NULL;

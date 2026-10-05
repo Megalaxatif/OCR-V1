@@ -1,6 +1,7 @@
 #pragma once
-#include <stddef.h>
+#include <stdio.h>
 #include "math.h"
+
 // fill the array sample with 10 images path where sample[i] correspond to a path to a training image for the digit i
 int GetSample10(char*** sample, char*** files, size_t* fileCount);
 // return a dynamically allocated array containing all the name of the files in the directory and stores the number of files in the directory in fileCount

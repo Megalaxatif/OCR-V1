@@ -1,6 +1,6 @@
 #include "header/math.h"
-#include <time.h>
 #include <math.h>
+#include <stdio.h>
 #include <stdlib.h>
 
 size_t matCount = 0;

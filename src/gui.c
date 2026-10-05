@@ -1,11 +1,5 @@
-#include "header/init.h"
-#include "header/math.h"
 #include "header/neurons.h"
 #include "header/files.h"
-#include "header/ocr.h"
-#include "header/settings.h"
-#include <stdio.h>
-#include <string.h>
 
 void LearningRateInterface(struct OCR* ocr, struct nk_context* ctx){
     char str[32] = {0};

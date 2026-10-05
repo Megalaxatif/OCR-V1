@@ -1,10 +1,7 @@
 #include "header/ocr.h"
-#include "header/settings.h"
 #include "header/gui.h"
 #include "header/neurons.h"
-#include <SDL2/SDL_stdinc.h>
-#include <stdio.h>
-#include <stdlib.h>
+
 
 void DestroySudokuArguments(
     SDL_Rect* horizontalBlocks,

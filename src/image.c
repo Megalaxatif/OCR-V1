@@ -2,14 +2,7 @@
 #include "header/math.h"
 #include "header/settings.h"
 #include "header/init.h"
-#include <SDL2/SDL.h>
-#include <SDL2/SDL_image.h>
-#include <SDL2/SDL_pixels.h>
-#include <SDL2/SDL_rect.h>
-#include <SDL2/SDL_render.h>
-#include <SDL2/SDL_stdinc.h>
-#include <SDL2/SDL_surface.h>
-#include <stdalign.h>
+
 
 struct Mat* InvertGrayScaleMatrix(struct Mat* grayScale){
     if (grayScale == NULL){
