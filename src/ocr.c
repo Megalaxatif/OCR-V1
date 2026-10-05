@@ -241,13 +241,13 @@ int HandleDropedFile(SDL_Event event, struct OCR* ocr){
     char* tmp = event.drop.file;
     size_t len = strlen(tmp);
     if (len >= SUDOKU_PATH_BUFFER_SIZE){
-        printf("Error: Update, the path given is %ld bytes long but the maximum size allowed is %d bytes\n", len+1, SUDOKU_PATH_BUFFER_SIZE);
+        printf("Error: HandleDropedFile, the path given is %ld bytes long but the maximum size allowed is %d bytes\n", len+1, SUDOKU_PATH_BUFFER_SIZE);
         SDL_free(tmp);
         return 1;
     }
     SDL_Surface* sudokuSurface = IMG_Load(tmp);
     if (sudokuSurface == NULL){
-        printf("Error: Update, impossible to load the image at \"%s\"", tmp);
+        printf("Error: HandleDropedFile, impossible to load the image at \"%s\"\n", tmp);
         SDL_free(tmp);
         return 1;
     }
@@ -256,7 +256,7 @@ int HandleDropedFile(SDL_Event event, struct OCR* ocr){
     SDL_FreeSurface(sudokuSurface);
     SDL_Surface* grayScale = ConvertSurfaceToGrayScale(convertedSurface);
     if (grayScale == NULL){
-        printf("Error: Update, ConvertSurfaceToGrayScale returned NULL\n");
+        printf("Error: HandleDropedFile, ConvertSurfaceToGrayScale returned NULL\n");
         SDL_free(tmp);
         SDL_FreeSurface(sudokuSurface);
         return 1;
