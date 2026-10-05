@@ -1,7 +1,9 @@
 #include "header/ocr.h"
 #include "header/gui.h"
 #include "header/neurons.h"
-
+#include "header/image.h"
+#include <SDL2/SDL_surface.h>
+#include <stdio.h>
 
 void DestroySudokuArguments(
     SDL_Rect* horizontalBlocks,
@@ -233,9 +235,55 @@ int GuiUpdate(struct nk_context* ctx, struct OCR* ocr){
     return error;
 }
 
+// TODO
+int HandleDropedFile(SDL_Event event, struct OCR* ocr){
+    // TODO check if the file has a valid extension
+    char* tmp = event.drop.file;
+    size_t len = strlen(tmp);
+    if (len >= SUDOKU_PATH_BUFFER_SIZE){
+        printf("Error: Update, the path given is %ld bytes long but the maximum size allowed is %d bytes\n", len+1, SUDOKU_PATH_BUFFER_SIZE);
+        SDL_free(tmp);
+        return 1;
+    }
+    SDL_Surface* sudokuSurface = IMG_Load(tmp);
+    if (sudokuSurface == NULL){
+        printf("Error: Update, impossible to load the image at \"%s\"", tmp);
+        SDL_free(tmp);
+        return 1;
+    }
+    // get the grayScale
+    SDL_Surface* convertedSurface = SDL_ConvertSurfaceFormat(sudokuSurface, SDL_PIXELFORMAT_RGBA32, 0);
+    SDL_FreeSurface(sudokuSurface);
+    SDL_Surface* grayScale = ConvertSurfaceToGrayScale(convertedSurface);
+    if (grayScale == NULL){
+        printf("Error: Update, ConvertSurfaceToGrayScale returned NULL\n");
+        SDL_free(tmp);
+        SDL_FreeSurface(sudokuSurface);
+        return 1;
+    }
+    else
+        convertedSurface = grayScale;
+
+    // set the new path
+    strcpy(ocr->settings->sudokuPath, tmp);
+    SDL_free(tmp);
+
+    // destroy the previous texture
+    if (ocr->settings->sudokuTexture != NULL)
+        SDL_DestroyTexture(ocr->settings->sudokuTexture);
+
+    // set the new texture
+    ocr->settings->sudokuTexture = SDL_CreateTextureFromSurface(renderer, convertedSurface);
+    SDL_FreeSurface(convertedSurface);
+    printf("file droped : %s\n", ocr->settings->sudokuPath);
+
+    return 0;
+}
+
 
 int Update(struct nk_context* ctx, struct OCR* ocr){
     SDL_Event event;
+    int errorCode = 0;
     nk_input_begin(ctx);
     while (SDL_PollEvent(&event)){
         if (event.type == SDL_QUIT)
@@ -243,22 +291,9 @@ int Update(struct nk_context* ctx, struct OCR* ocr){
         nk_sdl_handle_event(&event);
 
         if (event.type == SDL_DROPFILE){
-            // TODO check if the file has a valid extension
-            char* tmp = event.drop.file;
-            size_t len = strlen(tmp);
-            if (len >= SUDOKU_PATH_BUFFER_SIZE){
-                printf("Error: Update, the path given is %ld bytes long but the maximum size allowed is %d bytes\n", len+1, SUDOKU_PATH_BUFFER_SIZE);
-                SDL_free(tmp);
-                continue;
-            }
-            strcpy(ocr->settings->sudokuPath, tmp);
-            SDL_free(tmp);
-            if (ocr->settings->sudokuTexture != NULL)
-                SDL_DestroyTexture(ocr->settings->sudokuTexture);
-            SDL_Surface* sudokuSurface = IMG_Load(ocr->settings->sudokuPath);
-            ocr->settings->sudokuTexture = SDL_CreateTextureFromSurface(renderer, sudokuSurface);
-            SDL_FreeSurface(sudokuSurface);
-            printf("file droped : %s\n", ocr->settings->sudokuPath);
+            errorCode = HandleDropedFile(event, ocr);
+            if (errorCode != 0)
+                printf("Error: HandleDropedFile failed\n");
         }
     }
     nk_input_end(ctx);
@@ -267,9 +302,9 @@ int Update(struct nk_context* ctx, struct OCR* ocr){
     SDL_SetRenderDrawColor(renderer, 30, 30, 30, 255);
     SDL_RenderClear(renderer);
 
-    int errorCode = GuiUpdate(ctx, ocr);
+    errorCode = GuiUpdate(ctx, ocr);
     if (errorCode != 0)
-        printf("Error non blocking: Update, GuiUpdate returned %d\n", errorCode);
+        printf("Error : Update, GuiUpdate failed\n");
     SDL_SetRenderTarget(renderer, NULL);
 
     if (ocr->settings->sudokuTexture)

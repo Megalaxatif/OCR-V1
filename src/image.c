@@ -511,6 +511,34 @@ SDL_Texture** GetSudokuDigitTextures(SDL_Rect* digitRects, char* sudokuFilePath)
     return digitTextures;
 }
 
+SDL_Surface* ConvertSurfaceToGrayScale(SDL_Surface* surface){
+    if (surface == NULL){
+        printf("Error: GetGrayScale, invalid argument");
+        return NULL;
+    }
+    if (surface->format->format != SDL_PIXELFORMAT_RGBA32){
+        printf("Error: GetGrayScale, invalid surface format\n");
+        return NULL;
+    }
+
+    Uint32* pixels = surface->pixels; // cast the void*
+    for(int y = 0; y < surface->h; y++){
+        for(int x = 0; x < surface->w; x++){
+            int index = y * surface->pitch/4 + x;
+            Uint32 pixel = pixels[index];
+            Uint8 r, g, b, a = 0;
+            SDL_GetRGBA(pixel, surface->format, &r, &g, &b, &a);
+            double grayCode = 0.299 * r/255.0 + 0.587 * g/255.0 + 0.114 * b/255.0;
+            grayCode = grayCode < 0.8 ? 0 : 1; // only two values possible // TODO: put 0.8 in a constant
+
+            Uint32 grayPixel = SDL_MapRGBA(surface->format, grayCode*255, grayCode*255, grayCode*255, 255);
+            pixels[index] = grayPixel;
+        }
+    }
+    return surface;
+}
+
+
 struct Mat* GetGridGrayScaleMatrix(char* imgFileName){
     if (imgFileName == NULL){
         printf("Error: GetGridGrayScaleMatrix, imgFileName is NULL\n");
