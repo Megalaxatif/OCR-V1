@@ -235,7 +235,6 @@ int GuiUpdate(struct nk_context* ctx, struct OCR* ocr){
     return error;
 }
 
-// TODO
 int HandleDropedFile(SDL_Event event, struct OCR* ocr){
     // TODO check if the file has a valid extension
     char* tmp = event.drop.file;

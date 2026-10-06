@@ -19,9 +19,8 @@ int main(){
         if (errorCode == -1){
             running = 0;
         };
+        SDL_Delay(1000/60); // 60 fps
     }
-    cleanup:
-
     // clean the ocr structure
     DestroyOCR(ocr);
 

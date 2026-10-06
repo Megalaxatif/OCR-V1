@@ -1,205 +1,171 @@
 #include <SDL2/SDL.h>
+
 #include <math.h>
+#include <stdint.h>
 #include <stdlib.h>
-#include <stdio.h>
+#include <string.h>
 
-#define PI 3.14159265358979323846
-#define MAX_SKEW_ANGLE 20.0
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
+
+#define MAX_SKEW_ANGLE 80
 #define ANGLE_STEP 0.25
-#define BLACK_THRESHOLD 128
-#define HOUGH_PEAK_COUNT 10
 
-static int IsBlackPixel(SDL_Surface *surface, int x, int y)
+static void getRgbPixel(
+    const SDL_Surface *surface,
+    int x,
+    int y,
+    Uint8 *r,
+    Uint8 *g,
+    Uint8 *b,
+    Uint8 *a)
 {
-    Uint32 *pixels = (Uint32 *)surface->pixels;
-    int pitch = surface->pitch / sizeof(Uint32);
+    Uint32 *row = (Uint32 *)(
+        (Uint8 *)surface->pixels + (size_t)y * surface->pitch);
 
+    Uint32 pixel = row[x];
+
+    SDL_GetRGBA(pixel, surface->format, r, g, b, a);
+}
+
+static void setRgbaPixel(
+    SDL_Surface *surface,
+    int x,
+    int y,
+    Uint8 r,
+    Uint8 g,
+    Uint8 b,
+    Uint8 a)
+{
+    Uint32 *row = (Uint32 *)(
+        (Uint8 *)surface->pixels + (size_t)y * surface->pitch);
+
+    row[x] = SDL_MapRGBA(
+        surface->format,
+        r,
+        g,
+        b,
+        a);
+}
+
+static Uint8 getBinaryValue(
+    const SDL_Surface *surface,
+    int x,
+    int y)
+{
     Uint8 r;
     Uint8 g;
     Uint8 b;
     Uint8 a;
 
-    SDL_GetRGBA(
-        pixels[y * pitch + x],
-        surface->format,
+    getRgbPixel(
+        surface,
+        x,
+        y,
         &r,
         &g,
         &b,
-        &a
-    );
+        &a);
 
-    /*
-     * The surface is already grayscale, so testing the red channel
-     * is enough to know whether the pixel is dark.
-     */
-    return r < BLACK_THRESHOLD;
+    return r == 0 ? 0 : 1;
 }
 
-static int GetAccumulatorScore(const int *accumulator, int size)
+static Uint8 findForegroundValue(
+    const SDL_Surface *surface)
 {
-    int best[HOUGH_PEAK_COUNT] = {0};
+    size_t blackCount = 0;
+    size_t whiteCount = 0;
 
-    /*
-     * Keep the strongest Hough peaks.
-     * This is useful for grid images because several parallel lines
-     * should vote strongly for the same angle.
-     */
-    for (int i = 0; i < size; i++)
+    for (int y = 0; y < surface->h; y++)
     {
-        int value = accumulator[i];
-
-        for (int j = 0; j < HOUGH_PEAK_COUNT; j++)
+        for (int x = 0; x < surface->w; x++)
         {
-            if (value > best[j])
-            {
-                for (int k = HOUGH_PEAK_COUNT - 1; k > j; k--)
-                    best[k] = best[k - 1];
-
-                best[j] = value;
-                break;
-            }
+            if (getBinaryValue(surface, x, y) == 0)
+                blackCount++;
+            else
+                whiteCount++;
         }
     }
 
-    int score = 0;
+    /*
+     * On suppose que le fond occupe la majorité de l'image.
+     */
+    if (blackCount < whiteCount)
+        return 0;
 
-    for (int i = 0; i < HOUGH_PEAK_COUNT; i++)
-        score += best[i];
-
-    return score;
+    return 1;
 }
 
-static double FindSkewAngle(SDL_Surface *surface)
+static double findSkewAngle(
+    const SDL_Surface *surface,
+    Uint8 foreground)
 {
     int width = surface->w;
     int height = surface->h;
 
-    int diagonal = (int)ceil(
-        sqrt(
-            (double)width * width +
-            (double)height * height
-        )
-    );
+    int maxRho = (int)ceil(
+        hypot(
+            (double)width,
+            (double)height));
 
-    int rhoCount = diagonal * 2 + 1;
+    int rhoCount = 2 * maxRho + 1;
 
-    int *horizontalAccumulator =
-        calloc((size_t)rhoCount, sizeof(int));
+    int *accumulator = calloc(
+        (size_t)rhoCount,
+        sizeof(int));
 
-    int *verticalAccumulator =
-        calloc((size_t)rhoCount, sizeof(int));
-
-    if (horizontalAccumulator == NULL ||
-        verticalAccumulator == NULL)
-    {
-        free(horizontalAccumulator);
-        free(verticalAccumulator);
-
-        SDL_SetError(
-            "FindSkewAngle: failed to allocate Hough accumulators"
-        );
-
+    if (accumulator == NULL)
         return 0.0;
-    }
 
     double bestAngle = 0.0;
-    int bestScore = -1;
+    uint64_t bestScore = 0;
 
-    if (SDL_MUSTLOCK(surface))
-    {
-        if (SDL_LockSurface(surface) != 0)
-        {
-            free(horizontalAccumulator);
-            free(verticalAccumulator);
-            return 0.0;
-        }
-    }
-
-    /*
-     * Test every possible skew angle.
-     */
     for (double angle = -MAX_SKEW_ANGLE;
          angle <= MAX_SKEW_ANGLE;
          angle += ANGLE_STEP)
     {
-        for (int i = 0; i < rhoCount; i++)
-        {
-            horizontalAccumulator[i] = 0;
-            verticalAccumulator[i] = 0;
-        }
+        memset(
+            accumulator,
+            0,
+            (size_t)rhoCount * sizeof(int));
 
-        /*
-         * For horizontal lines, the normal is around 90 degrees.
-         */
-        double horizontalTheta =
-            (90.0 + angle) * PI / 180.0;
+        double radians = angle * M_PI / 180.0;
 
-        /*
-         * For vertical lines, the normal is around 0 degrees.
-         */
-        double verticalTheta =
-            angle * PI / 180.0;
+        double cosAngle = cos(radians);
+        double sinAngle = sin(radians);
 
-        double horizontalCos = cos(horizontalTheta);
-        double horizontalSin = sin(horizontalTheta);
-
-        double verticalCos = cos(verticalTheta);
-        double verticalSin = sin(verticalTheta);
-
-        /*
-         * Every black pixel votes in both horizontal and vertical
-         * Hough accumulators.
-         */
         for (int y = 0; y < height; y++)
         {
             for (int x = 0; x < width; x++)
             {
-                if (!IsBlackPixel(surface, x, y))
+                if (getBinaryValue(surface, x, y) != foreground)
                     continue;
 
-                double horizontalRho =
-                    x * horizontalCos +
-                    y * horizontalSin;
+                double rho =
+                    (double)x * cosAngle +
+                    (double)y * sinAngle;
 
-                double verticalRho =
-                    x * verticalCos +
-                    y * verticalSin;
+                int rhoIndex =
+                    (int)lround(rho) + maxRho;
 
-                int horizontalIndex =
-                    (int)round(horizontalRho) + diagonal;
-
-                int verticalIndex =
-                    (int)round(verticalRho) + diagonal;
-
-                if (horizontalIndex >= 0 &&
-                    horizontalIndex < rhoCount)
+                if (rhoIndex >= 0 &&
+                    rhoIndex < rhoCount)
                 {
-                    horizontalAccumulator[horizontalIndex]++;
-                }
-
-                if (verticalIndex >= 0 &&
-                    verticalIndex < rhoCount)
-                {
-                    verticalAccumulator[verticalIndex]++;
+                    accumulator[rhoIndex]++;
                 }
             }
         }
 
-        int horizontalScore =
-            GetAccumulatorScore(
-                horizontalAccumulator,
-                rhoCount
-            );
+        uint64_t score = 0;
 
-        int verticalScore =
-            GetAccumulatorScore(
-                verticalAccumulator,
-                rhoCount
-            );
+        for (int i = 0; i < rhoCount; i++)
+        {
+            uint64_t value =
+                (uint64_t)accumulator[i];
 
-        int score =
-            horizontalScore +
-            verticalScore;
+            score += value * value;
+        }
 
         if (score > bestScore)
         {
@@ -208,199 +174,181 @@ static double FindSkewAngle(SDL_Surface *surface)
         }
     }
 
-    if (SDL_MUSTLOCK(surface))
-        SDL_UnlockSurface(surface);
-
-    free(horizontalAccumulator);
-    free(verticalAccumulator);
+    free(accumulator);
 
     return bestAngle;
 }
 
-static SDL_Surface *RotateSurface(
-    SDL_Surface *source,
-    double angle)
+static SDL_Surface *rotateBinaryRgba32(
+    const SDL_Surface *source,
+    double angle,
+    Uint8 background)
 {
-    double rad = angle * PI / 180.0;
+    double radians = angle * M_PI / 180.0;
 
-    double c = cos(rad);
-    double s = sin(rad);
+    double cosAngle = cos(radians);
+    double sinAngle = sin(radians);
 
-    int srcWidth = source->w;
-    int srcHeight = source->h;
+    int sourceWidth = source->w;
+    int sourceHeight = source->h;
 
-    /*
-     * Compute a destination size large enough to contain
-     * the entire rotated image.
-     */
-    int dstWidth = (int)ceil(
-        fabs(srcWidth * c) +
-        fabs(srcHeight * s)
-    );
+    int destinationWidth = (int)ceil(
+        fabs((double)sourceWidth * cosAngle) +
+        fabs((double)sourceHeight * sinAngle));
 
-    int dstHeight = (int)ceil(
-        fabs(srcWidth * s) +
-        fabs(srcHeight * c)
-    );
+    int destinationHeight = (int)ceil(
+        fabs((double)sourceWidth * sinAngle) +
+        fabs((double)sourceHeight * cosAngle));
 
     SDL_Surface *destination =
         SDL_CreateRGBSurfaceWithFormat(
             0,
-            dstWidth,
-            dstHeight,
+            destinationWidth,
+            destinationHeight,
             32,
-            SDL_PIXELFORMAT_RGBA32
-        );
+            SDL_PIXELFORMAT_RGBA32);
 
     if (destination == NULL)
         return NULL;
 
-    /*
-     * Fill empty areas with white.
-     */
-    Uint32 white = SDL_MapRGBA(
-        destination->format,
-        255,
-        255,
-        255,
-        255
-    );
+    Uint8 backgroundValue =
+        background == 0 ? 0 : 255;
 
-    if (SDL_FillRect(destination, NULL, white) != 0)
-    {
-        SDL_FreeSurface(destination);
-        return NULL;
-    }
+    Uint32 backgroundPixel =
+        SDL_MapRGBA(
+            destination->format,
+            backgroundValue,
+            backgroundValue,
+            backgroundValue,
+            255);
 
-    double srcCX = (srcWidth - 1) / 2.0;
-    double srcCY = (srcHeight - 1) / 2.0;
+    SDL_FillRect(
+        destination,
+        NULL,
+        backgroundPixel);
 
-    double dstCX = (dstWidth - 1) / 2.0;
-    double dstCY = (dstHeight - 1) / 2.0;
+    double sourceCenterX =
+        ((double)sourceWidth - 1.0) / 2.0;
 
-    if (SDL_MUSTLOCK(source))
-    {
-        if (SDL_LockSurface(source) != 0)
-        {
-            SDL_FreeSurface(destination);
-            return NULL;
-        }
-    }
+    double sourceCenterY =
+        ((double)sourceHeight - 1.0) / 2.0;
+
+    double destinationCenterX =
+        ((double)destinationWidth - 1.0) / 2.0;
+
+    double destinationCenterY =
+        ((double)destinationHeight - 1.0) / 2.0;
 
     if (SDL_MUSTLOCK(destination))
     {
         if (SDL_LockSurface(destination) != 0)
         {
-            if (SDL_MUSTLOCK(source))
-                SDL_UnlockSurface(source);
-
             SDL_FreeSurface(destination);
             return NULL;
         }
     }
 
-    Uint32 *srcPixels = (Uint32 *)source->pixels;
-    Uint32 *dstPixels = (Uint32 *)destination->pixels;
-
-    int srcPitch =
-        source->pitch / sizeof(Uint32);
-
-    int dstPitch =
-        destination->pitch / sizeof(Uint32);
-
-    /*
-     * Use inverse mapping:
-     * for each destination pixel, compute the corresponding
-     * position in the source image.
-     */
-    for (int y = 0; y < dstHeight; y++)
+    for (int y = 0; y < destinationHeight; y++)
     {
-        for (int x = 0; x < dstWidth; x++)
+        for (int x = 0; x < destinationWidth; x++)
         {
-            double dx = x - dstCX;
-            double dy = y - dstCY;
+            double deltaX =
+                (double)x - destinationCenterX;
 
-            double srcX =
-                c * dx +
-                s * dy +
-                srcCX;
+            double deltaY =
+                (double)y - destinationCenterY;
 
-            double srcY =
-                -s * dx +
-                c * dy +
-                srcCY;
+            double sourceX =
+                cosAngle * deltaX +
+                sinAngle * deltaY +
+                sourceCenterX;
 
-            int sx = (int)round(srcX);
-            int sy = (int)round(srcY);
+            double sourceY =
+                -sinAngle * deltaX +
+                cosAngle * deltaY +
+                sourceCenterY;
 
-            if (sx < 0 ||
-                sx >= srcWidth ||
-                sy < 0 ||
-                sy >= srcHeight)
+            int sourcePixelX =
+                (int)lround(sourceX);
+
+            int sourcePixelY =
+                (int)lround(sourceY);
+
+            if (sourcePixelX < 0 ||
+                sourcePixelX >= sourceWidth ||
+                sourcePixelY < 0 ||
+                sourcePixelY >= sourceHeight)
             {
                 continue;
             }
 
-            dstPixels[y * dstPitch + x] =
-                srcPixels[sy * srcPitch + sx];
+            Uint8 value = getBinaryValue(
+                source,
+                sourcePixelX,
+                sourcePixelY);
+
+            Uint8 rgb =
+                value == 0 ? 0 : 255;
+
+            setRgbaPixel(
+                destination,
+                x,
+                y,
+                rgb,
+                rgb,
+                rgb,
+                255);
         }
     }
 
     if (SDL_MUSTLOCK(destination))
         SDL_UnlockSurface(destination);
 
-    if (SDL_MUSTLOCK(source))
-        SDL_UnlockSurface(source);
-
     return destination;
 }
 
-SDL_Surface *DeskewSurface(SDL_Surface *grayscale)
+SDL_Surface *DeskewSurface(SDL_Surface *surface)
 {
-    /*
-     * Reject invalid input.
-     */
-    if (grayscale == NULL)
+    if (surface == NULL)
+    {
+        SDL_SetError("DeskewSurface: surface is NULL");
+        return NULL;
+    }
+
+    if (surface->format->format != SDL_PIXELFORMAT_RGBA32)
     {
         SDL_SetError(
-            "DeskewSurface: input surface is NULL"
-        );
+            "DeskewSurface: surface must be SDL_PIXELFORMAT_RGBA32");
 
         return NULL;
     }
 
-    /*
-     * The input surface must use RGBA32.
-     */
-    if (grayscale->format == NULL ||
-        grayscale->format->format != SDL_PIXELFORMAT_RGBA32)
+    if (SDL_MUSTLOCK(surface))
     {
-        SDL_SetError(
-            "DeskewSurface: input surface must use SDL_PIXELFORMAT_RGBA32"
-        );
-
-        return NULL;
+        if (SDL_LockSurface(surface) != 0)
+            return NULL;
     }
 
-    /*
-     * Find the skew angle using the Hough transform.
-     */
-    double angle =
-        FindSkewAngle(grayscale);
+    Uint8 foreground =
+        findForegroundValue(surface);
 
-    printf(
-        "Detected skew angle: %.2f degrees\n",
-        angle
-    );
+    Uint8 background =
+        foreground == 0 ? 1 : 0;
 
-    /*
-     * Rotate in the opposite direction to straighten the image.
-     */
+    double skewAngle =
+        findSkewAngle(
+            surface,
+            foreground);
+
     SDL_Surface *result =
-        RotateSurface(
-            grayscale,
-            -angle
-        );
+        rotateBinaryRgba32(
+            surface,
+            -skewAngle,
+            background);
 
+    if (SDL_MUSTLOCK(surface))
+        SDL_UnlockSurface(surface);
+
+    printf("Detected angle: %f\n", skewAngle);
     return result;
 }
