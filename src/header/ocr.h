@@ -26,10 +26,10 @@ struct Sudoku {
 };
 
 struct Settings {
-    char sudokuPath[SUDOKU_PATH_BUFFER_SIZE];
     char networkPath[NETWORK_PATH_BUFFER_SIZE];
     int displayDebugInfo;
     SDL_Texture* sudokuTexture;
+    SDL_Surface* sudokuSurface;
     size_t trainingCycleCount;
     double learningRate;
     size_t layerCount;

@@ -68,16 +68,18 @@ void DestroySettings(struct Settings* settings){
     }
     if (settings->sudokuTexture != NULL)
         SDL_DestroyTexture(settings->sudokuTexture);
+    if (settings->sudokuSurface != NULL)
+        SDL_FreeSurface(settings->sudokuSurface);
     free(settings);
 }
 
 struct Settings* CreateDefaultSettings(){
     struct Settings* settings = malloc(sizeof(struct Settings));
     *settings = (struct Settings){
-        .sudokuPath = {0},
         .networkPath = DEFAULT_NETWORK_PATH,
         .displayDebugInfo = DEFAULT_DEBUG_INFO,
         .sudokuTexture = NULL,
+        .sudokuSurface = NULL,
         .trainingCycleCount = DEFAULT_TRAINING_CYCLE_COUNT,
         .learningRate = DEFAULT_LEARNING_RATE,
         .layerCount = DEFAULT_LAYER_COUNT,
@@ -238,16 +240,10 @@ int GuiUpdate(struct nk_context* ctx, struct OCR* ocr){
 int HandleDropedFile(SDL_Event event, struct OCR* ocr){
     // TODO check if the file has a valid extension
     char* tmp = event.drop.file;
-    size_t len = strlen(tmp);
-    if (len >= SUDOKU_PATH_BUFFER_SIZE){
-        printf("Error: HandleDropedFile, the path given is %ld bytes long but the maximum size allowed is %d bytes\n", len+1, SUDOKU_PATH_BUFFER_SIZE);
-        SDL_free(tmp);
-        return 1;
-    }
     SDL_Surface* sudokuSurface = IMG_Load(tmp);
+    SDL_free(tmp);
     if (sudokuSurface == NULL){
-        printf("Error: HandleDropedFile, impossible to load the image at \"%s\"\n", tmp);
-        SDL_free(tmp);
+        printf("Error: HandleDropedFile, impossible to load the image\n");
         return 1;
     }
     // get the grayScale
@@ -256,7 +252,6 @@ int HandleDropedFile(SDL_Event event, struct OCR* ocr){
     SDL_Surface* grayScale = ConvertSurfaceToGrayScale(convertedSurface);
     if (grayScale == NULL){
         printf("Error: HandleDropedFile, ConvertSurfaceToGrayScale returned NULL\n");
-        SDL_free(tmp);
         SDL_FreeSurface(convertedSurface);
         return 1;
     }
@@ -276,13 +271,13 @@ int HandleDropedFile(SDL_Event event, struct OCR* ocr){
 
     // set the new texture
     ocr->settings->sudokuTexture = SDL_CreateTextureFromSurface(renderer, rotatedSurface);
-    SDL_FreeSurface(rotatedSurface);
 
-    // set the new path
-    strcpy(ocr->settings->sudokuPath, tmp);
-    SDL_free(tmp);
+    // destroy the previous surface
+    if (ocr->settings->sudokuSurface != NULL)
+        SDL_FreeSurface(ocr->settings->sudokuSurface);
 
-    printf("file droped : %s\n", ocr->settings->sudokuPath);
+    // set the new surface
+    ocr->settings->sudokuSurface = rotatedSurface;
 
     return 0;
 }
