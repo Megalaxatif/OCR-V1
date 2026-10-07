@@ -5,10 +5,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#ifndef M_PI
-#define M_PI 3.14159265358979323846
-#endif
-
 #define MAX_SKEW_ANGLE 90
 #define ROUGH_ANGLE_STEP 1.0
 #define FINE_ANGLE_STEP 0.1

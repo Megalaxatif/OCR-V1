@@ -479,25 +479,15 @@ struct Mat** ConvertTexturesToGrayScale(SDL_Texture** textures, size_t textureCo
     return grayScales;
 }
 
-SDL_Texture** GetSudokuDigitTextures(SDL_Rect* digitRects, char* sudokuFilePath){
-    if(digitRects == NULL || sudokuFilePath == NULL){
+SDL_Texture** GetSudokuDigitTextures(SDL_Rect* digitRects, SDL_Texture* sudokuTexture){
+    if(digitRects == NULL || sudokuTexture == NULL){
         printf("Error: GetSudokuDigits, invalid argument\n");
         return NULL;
     }
 
-    SDL_Surface* sudoku = IMG_Load(sudokuFilePath); // TODO : give the sudoku as a texture in argument
-    if (sudoku == NULL){
-        printf("Error: GetSudokuDigits, impossible to load the image at %s\n", sudokuFilePath);
-        return NULL;
-    }
-
-    SDL_Texture* sudokuTexture = SDL_CreateTextureFromSurface(renderer, sudoku);
-    SDL_FreeSurface(sudoku);
-
     SDL_Texture** digitTextures = malloc(81*sizeof(SDL_Texture*));
-    for(int i = 0; i < 81; i++){
+    for(int i = 0; i < 81; i++)
         digitTextures[i] = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET, NETWORK_IMG_SIZE, NETWORK_IMG_SIZE);
-    }
 
     for(int i = 0; i < 9; i++){
         for(int j = 0; j < 9; j++){
@@ -538,57 +528,34 @@ SDL_Surface* ConvertSurfaceToGrayScale(SDL_Surface* surface){
 }
 
 
-struct Mat* GetGridGrayScaleMatrix(char* imgFileName){
-    if (imgFileName == NULL){
-        printf("Error: GetGridGrayScaleMatrix, imgFileName is NULL\n");
-        return NULL;
-    }
-
-    SDL_Surface* surface = IMG_Load(imgFileName);
-
+struct Mat* ConvertSurfaceToGrayScaleMatrix(SDL_Surface* surface){
     if (surface == NULL){
-        printf("Error: GetGridGrayScaleMatrix, impossible to load the image at %s\n", imgFileName);
+        printf("Error: ConvertSurfaceToGrayScaleMatrix, invalid argument\n");
         return NULL;
     }
 
     int format = surface->format->format;
-    if (format != SDL_PIXELFORMAT_INDEX8 && format != SDL_PIXELFORMAT_RGB24){
-        printf("Error: GetGridGrayScaleMatrix, the image %s has the %s surface type but only SDL_PIXELFORMAT_INDEX8 and SDL_PIXELFORMAT_RGB24 are supported\n", imgFileName, SDL_GetPixelFormatName(format));
+    if (format != SDL_PIXELFORMAT_RGBA32){
+        printf("Error: ConvertSurfaceToGrayScaleMatrix, the surface has the %s surface type but only SDL_PIXELFORMAT_RGBA32 is supported\n", SDL_GetPixelFormatName(format));
         SDL_FreeSurface(surface);
         return NULL;
     }
 
-    Uint8* pixels = surface->pixels; // cast the void*
     struct Mat* grayScale = MatCreate(surface->h, surface->w, NULL, NULL);
 
-    if (format == SDL_PIXELFORMAT_INDEX8){
-        SDL_Color* colorPalette = surface->format->palette->colors;
-
-        for(int y = 0; y < surface->h; y++){
-            for(int x = 0; x < surface->w; x++){
-                Uint8 colorId = *(Uint8*)(pixels + y * surface->pitch + x);
-                SDL_Color color = colorPalette[colorId];
-                double grayCode =
-                    0.299 * color.r/255 +
-                    0.587 * color.g/255 +
-                    0.114 * color.b/255;
-                grayScale->data[y][x] = grayCode < 0.8 ? 0 : 1;
-
-            }
+    Uint8* pixels = surface->pixels; // cast the void*
+    for(int y = 0; y < surface->h; y++){
+        for(int x = 0; x < surface->w; x++){
+            int index = y * surface->pitch/4 + x;
+            Uint32 pixel = pixels[index];
+            Uint8 r, g, b, a = 0;
+            SDL_GetRGBA(pixel, surface->format, &r, &g, &b, &a);
+            double grayCode = 0.299 * r + 0.587 * g + 0.114 * b;
+            double binaryGrayCode = grayCode < 204 ? 0 : 1;
+            grayScale->data[y][x] = binaryGrayCode;
         }
     }
-    else if (format == SDL_PIXELFORMAT_RGB24){
-        for(int y = 0; y < surface->h; y++){
-            for(int x = 0; x < surface->w; x++){
-                Uint8* pixel = pixels + y * surface->pitch + x*3;
-                double grayCode = // TODO: use GetRGBA here
-                    0.299 * pixel[0]/255 +
-                    0.587 * pixel[1]/255 +
-                    0.114 * pixel[2]/255;
-                grayScale->data[y][x] = grayCode < 0.8 ? 0 : 1;
-            }
-        }
-    }
+
     SDL_FreeSurface(surface);
     return grayScale;
 }

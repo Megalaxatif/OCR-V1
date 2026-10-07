@@ -349,11 +349,11 @@ int SolveSudoku(struct OCR* ocr){
         printf("Error: SolveSudoku, invalid argument\n");
         return 1;
     }
-    char* sudokuPath = ocr->settings->sudokuPath;
-    struct Mat* gridGrayScale = GetGridGrayScaleMatrix(sudokuPath);
+    SDL_Surface* sudokuSurface = ocr->settings->sudokuSurface;
+    struct Mat* gridGrayScale = ConvertSurfaceToGrayScaleMatrix(sudokuSurface);
 
     if (gridGrayScale == NULL){
-        printf("Error: SolveSudoku, gridGrayScale is NULL\n");
+        printf("Error: SolveSudoku, ConvertSurfaceToGrayScaleMatrix is NULL\n");
         return 2;
     }
 

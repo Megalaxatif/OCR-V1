@@ -22,13 +22,13 @@ SDL_Rect* ConvertVerticalLinesToBlocks(SDL_Rect* lines, size_t lineCount, size_t
 int SortBlocks(SDL_Rect** horizontalBlocks, SDL_Rect** verticalBlocks, size_t* horizontalBlockCount, size_t* verticalBlockCount);
 // IMPORTANT: this function supposes that horizontalBlocks and verticalBlocks represent a valid sudoku grid
 SDL_Rect* GetSudokuDigitRects(SDL_Rect* horizontalBlocks, SDL_Rect* verticalBlocks); // return the array of rectangles from where to extract the characters on the grid
-SDL_Texture** GetSudokuDigitTextures(SDL_Rect* digitRects, char* sudokuFilePath); // extract the textures at the specified rectangles
+SDL_Texture** GetSudokuDigitTextures(SDL_Rect* digitRects, SDL_Texture* sudokuTexture); // extract the textures at the specified rectangles
 struct Mat** ConvertTexturesToGrayScale(SDL_Texture** textures, size_t textureCount); // convert the list of textures to a list of grayScale and return it
 int DrawRects(SDL_Rect* rects, size_t rectCount, struct Mat* referenceMatrix, SDL_Color color); // draw the list of rectangles with the given color on the screen, referenceMatrix is needed to resize the rectangles correctly
 int DrawFilledRects(SDL_Rect* rects, size_t rectCount, struct Mat* referenceMatrix, SDL_Color color); // same as DrawRects but this time it draws filled rectangles
 int DrawGrayScale(struct Mat* grayScale); // draw a grayScale on the screen
-struct Mat* GetGridGrayScaleMatrix(char* imgFileName);// get the grayScale matrix of the given image, this grayScale will only contain 0s or 1s
-SDL_Surface* ConvertSurfaceToGrayScale(SDL_Surface* surface); // convert the given surface to a grayscale, this grayScale will only contain 0s or 1s
+struct Mat* ConvertSurfaceToGrayScaleMatrix(SDL_Surface* surface);// convert the given surface into a grayscale matrix containing only 0s or 1s
+SDL_Surface* ConvertSurfaceToGrayScale(SDL_Surface* surface); // convert the given surface to a grayscale, this grayScale will only contain 1s or 0s
 // get the grayscale of the given image with values between 0 and 1 and store the result in a column matrix so that it can be used for the network
 struct Mat* GetForwardPassGrayScaleMatrix(SDL_Surface* trainingSurface);
 struct Mat** DeleteBlankGrayScales(struct Mat** grayScales, size_t grayScaleCount); // the grayScales considered empty in grayScales are set to NULL

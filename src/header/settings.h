@@ -9,7 +9,6 @@
 #define TRAIN_DIRECTORY_PATH "/home/megalaxatif/Documents/code/OCR-V1/database/train5/" // path where the train directory containing all the training images is in the project
 
 
-#define SUDOKU_PATH_BUFFER_SIZE 128 // size of the buffer containing the path to the sudoku we want to solve
 #define NETWORK_PATH_BUFFER_SIZE 128 // size of the buffer containing the path we want to use to either store or load the network
 
 #define DEFAULT_DEBUG_INFO 0
