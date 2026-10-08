@@ -30,6 +30,7 @@ struct Settings {
     int displayDebugInfo;
     SDL_Texture* sudokuTexture;
     SDL_Surface* sudokuSurface;
+    struct Mat* gridMatrix;
     size_t trainingCycleCount;
     double learningRate;
     size_t layerCount;
@@ -50,6 +51,7 @@ struct OCR {
 
 
 int Update(struct nk_context* ctx, struct OCR* ocr);
+struct OCR* CreateOCR();
 void DestroyOCR(struct OCR* ocr);
 // this function exists because I'm too lazy to copy paste the same code for both DestroyOCR and the cleanup label of SolveSudoku
 void DestroySudokuArguments(
@@ -59,4 +61,7 @@ void DestroySudokuArguments(
     SDL_Texture** digitTextures,
     struct Mat** digitGrayScales,
     int* digits);
-struct OCR* CreateOCR();
+struct Sudoku* CreateEmptySudoku();
+void DestroySudoku(struct Sudoku* sudoku);
+
+void ChangeGrid(struct OCR* ocr, SDL_Surface* newGrid);

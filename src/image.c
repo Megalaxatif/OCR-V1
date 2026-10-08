@@ -24,7 +24,7 @@ int DrawRects(SDL_Rect* rects, size_t rectCount, struct Mat* referenceMatrix, SD
     }
     SDL_Texture* texture = SDL_CreateTexture(
         renderer,
-        SDL_PIXELFORMAT_RGBA8888,
+        SDL_PIXELFORMAT_RGBA32,
         SDL_TEXTUREACCESS_TARGET,
         referenceMatrix->col,
         referenceMatrix->row
@@ -52,7 +52,7 @@ int DrawFilledRects(SDL_Rect* rects, size_t rectCount, struct Mat* referenceMatr
     }
     SDL_Texture* texture = SDL_CreateTexture(
         renderer,
-        SDL_PIXELFORMAT_RGBA8888,
+        SDL_PIXELFORMAT_RGBA32,
         SDL_TEXTUREACCESS_TARGET,
         referenceMatrix->col,
         referenceMatrix->row
@@ -80,7 +80,7 @@ int DrawGrayScale(struct Mat* grayScale){
     }
     SDL_Texture* texture = SDL_CreateTexture(
         renderer,
-        SDL_PIXELFORMAT_RGBA8888,
+        SDL_PIXELFORMAT_RGBA32,
         SDL_TEXTUREACCESS_TARGET,
         grayScale->col,
         grayScale->row
@@ -306,6 +306,14 @@ SDL_Rect* ScanHorizontalLines(struct Mat* grayScale, size_t* lineCount_){
 }
 
 SDL_Rect* ConvertHorizontalLinesToBlocks(SDL_Rect* lines, size_t lineCount, size_t* blockCount_){
+    if (lines == NULL){
+        printf("Error: ConvertHorizontalLinesToBlocks, lines null\n");
+        return NULL;
+    }
+    if (lineCount == 0){
+        printf("Error: ConvertHorizontalLinesToBlocks, lineCount is 0\n");
+        return NULL;
+    }
     if (lines == NULL || blockCount_ == NULL|| lineCount <= 0){
         printf("Error: ConvertHorizontalLinesToBlocks, invalid argument\n");
         return NULL;
@@ -457,11 +465,11 @@ struct Mat** ConvertTexturesToGrayScale(SDL_Texture** textures, size_t textureCo
         return NULL;
     }
     struct Mat** grayScales = malloc(textureCount * sizeof(struct Mat*));
-    SDL_Surface* rgbaSurface = SDL_CreateRGBSurfaceWithFormat( 0, NETWORK_IMG_SIZE, NETWORK_IMG_SIZE, 32, SDL_PIXELFORMAT_RGBA8888);
+    SDL_Surface* rgbaSurface = SDL_CreateRGBSurfaceWithFormat( 0, NETWORK_IMG_SIZE, NETWORK_IMG_SIZE, 32, SDL_PIXELFORMAT_RGBA32);
 
     for(size_t i = 0; i < textureCount; i++){
         SDL_SetRenderTarget(renderer, textures[i]);
-        SDL_RenderReadPixels(renderer, NULL, SDL_PIXELFORMAT_RGBA8888, rgbaSurface->pixels, rgbaSurface->pitch);
+        SDL_RenderReadPixels(renderer, NULL, SDL_PIXELFORMAT_RGBA32, rgbaSurface->pixels, rgbaSurface->pitch);
 
         grayScales[i] = GetForwardPassGrayScaleMatrix(rgbaSurface);
 
@@ -487,7 +495,7 @@ SDL_Texture** GetSudokuDigitTextures(SDL_Rect* digitRects, SDL_Texture* sudokuTe
 
     SDL_Texture** digitTextures = malloc(81*sizeof(SDL_Texture*));
     for(int i = 0; i < 81; i++)
-        digitTextures[i] = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET, NETWORK_IMG_SIZE, NETWORK_IMG_SIZE);
+        digitTextures[i] = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_TARGET, NETWORK_IMG_SIZE, NETWORK_IMG_SIZE);
 
     for(int i = 0; i < 9; i++){
         for(int j = 0; j < 9; j++){
@@ -495,9 +503,6 @@ SDL_Texture** GetSudokuDigitTextures(SDL_Rect* digitRects, SDL_Texture* sudokuTe
             SDL_RenderCopy( renderer, sudokuTexture, digitRects + i*9+j, NULL);
         }
     }
-
-    SDL_SetRenderTarget(renderer, NULL);
-    SDL_DestroyTexture(sudokuTexture);
     return digitTextures;
 }
 
@@ -540,8 +545,7 @@ struct Mat* ConvertSurfaceToGrayScaleMatrix(SDL_Surface* surface){
     }
 
     struct Mat* grayScale = MatCreate(surface->h, surface->w, NULL, NULL);
-
-    Uint8* pixels = surface->pixels; // cast the void*
+    Uint32* pixels = surface->pixels; // cast the void*
     for(int y = 0; y < surface->h; y++){
         for(int x = 0; x < surface->w; x++){
             int index = y * surface->pitch/4 + x;
@@ -553,8 +557,6 @@ struct Mat* ConvertSurfaceToGrayScaleMatrix(SDL_Surface* surface){
             grayScale->data[y][x] = binaryGrayCode;
         }
     }
-
-    SDL_FreeSurface(surface);
     return grayScale;
 }
 
@@ -569,8 +571,8 @@ struct Mat* GetForwardPassGrayScaleMatrix(SDL_Surface* surface){
     }
 
     int format = surface->format->format;
-    if (format != SDL_PIXELFORMAT_RGBA8888){
-        printf("Error: GetForwardPassGrayScaleMatrix, the surface given has the %s surface type but only SDL_PIXELFORMAT_RGBA8888 is supported\n", SDL_GetPixelFormatName(format));
+    if (format != SDL_PIXELFORMAT_RGBA32){
+        printf("Error: GetForwardPassGrayScaleMatrix, the surface given has the %s surface type but only SDL_PIXELFORMAT_RGBA32 is supported\n", SDL_GetPixelFormatName(format));
         return NULL;
     }
 

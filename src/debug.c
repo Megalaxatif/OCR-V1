@@ -29,7 +29,7 @@ int DrawDigitGrayScales(struct Mat** digitGrayScales, SDL_Rect* rects, size_t re
     }
     SDL_Texture* texture = SDL_CreateTexture(
         renderer,
-        SDL_PIXELFORMAT_RGBA8888,
+        SDL_PIXELFORMAT_RGBA32,
         SDL_TEXTUREACCESS_TARGET,
         referenceMatrix->col,
         referenceMatrix->row

@@ -1,5 +1,7 @@
 #pragma once
 
+#define FPS 60
+
 #define SCREEN_W 1000
 #define SCREEN_H 1000
 #define NETWORK_IMG_SIZE 28 // pixel width and height of the images that the network can take
@@ -11,7 +13,7 @@
 
 #define NETWORK_PATH_BUFFER_SIZE 128 // size of the buffer containing the path we want to use to either store or load the network
 
-#define DEFAULT_DEBUG_INFO 0
+#define DEFAULT_DEBUG_INFO 1
 #define DEFAULT_NETWORK_PATH "save.ocr"
 #define DEFAULT_TRAINING_CYCLE_COUNT 200
 #define DEFAULT_LEARNING_RATE 0.02

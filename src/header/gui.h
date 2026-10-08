@@ -6,3 +6,4 @@ int LoadNetworkButton(struct OCR* ocr);
 void LearningRateInterface(struct OCR* ocr, struct nk_context* ctx);
 void NeuronsPerLayerInterface(struct OCR* ocr, struct nk_context* ctx);
 void TrainingCycleInterface(struct OCR* ocr, struct nk_context* ctx);
+void RotateInterface(struct OCR* ocr, struct nk_context* ctx);

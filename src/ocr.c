@@ -70,6 +70,8 @@ void DestroySettings(struct Settings* settings){
         SDL_DestroyTexture(settings->sudokuTexture);
     if (settings->sudokuSurface != NULL)
         SDL_FreeSurface(settings->sudokuSurface);
+    if (settings->gridMatrix != NULL)
+        MatDestroy(settings->gridMatrix);
     free(settings);
 }
 
@@ -80,6 +82,7 @@ struct Settings* CreateDefaultSettings(){
         .displayDebugInfo = DEFAULT_DEBUG_INFO,
         .sudokuTexture = NULL,
         .sudokuSurface = NULL,
+        .gridMatrix = NULL,
         .trainingCycleCount = DEFAULT_TRAINING_CYCLE_COUNT,
         .learningRate = DEFAULT_LEARNING_RATE,
         .layerCount = DEFAULT_LAYER_COUNT,
@@ -130,6 +133,33 @@ void DestroyOCR(struct OCR* ocr){
     DestroySudoku(ocr->sudoku);
     DestroyNetwork(ocr->network);
     free(ocr);
+}
+
+void ChangeGrid(struct OCR* ocr, SDL_Surface* newGrid){
+    if (newGrid == NULL){
+        printf("Error: ChangeGrid, invalid argument\n");
+        return;
+    }
+    // destroy the previous matrix
+    if (ocr->settings->gridMatrix != NULL)
+        MatDestroy(ocr->settings->gridMatrix);
+
+    //set the new matrix
+    ocr->settings->gridMatrix = ConvertSurfaceToGrayScaleMatrix(newGrid);
+
+    // destroy the previous texture
+    if (ocr->settings->sudokuTexture != NULL)
+        SDL_DestroyTexture(ocr->settings->sudokuTexture);
+
+    // set the new texture
+    ocr->settings->sudokuTexture = SDL_CreateTextureFromSurface(renderer, newGrid);
+
+    // destroy the previous surface
+    if (ocr->settings->sudokuSurface != NULL)
+        SDL_FreeSurface(ocr->settings->sudokuSurface);
+
+    // set the new surface
+    ocr->settings->sudokuSurface = newGrid;
 }
 
 int GuiUpdate(struct nk_context* ctx, struct OCR* ocr){
@@ -219,6 +249,7 @@ int GuiUpdate(struct nk_context* ctx, struct OCR* ocr){
                 printf("Error: GuiUpdate, SolveSudoku returned an error\n");
             }
         }
+        RotateInterface(ocr, ctx);
 
         //OPTIONS
         nk_layout_row_dynamic(ctx, 25, 1);
@@ -265,19 +296,12 @@ int HandleDropedFile(SDL_Event event, struct OCR* ocr){
         SDL_free(tmp);
         return 1;
     }
-    // destroy the previous texture
-    if (ocr->settings->sudokuTexture != NULL)
-        SDL_DestroyTexture(ocr->settings->sudokuTexture);
+    ChangeGrid(ocr, rotatedSurface);
 
-    // set the new texture
-    ocr->settings->sudokuTexture = SDL_CreateTextureFromSurface(renderer, rotatedSurface);
+    // reset the sudoku informations
+    DestroySudoku(ocr->sudoku);
+    ocr->sudoku = CreateEmptySudoku();
 
-    // destroy the previous surface
-    if (ocr->settings->sudokuSurface != NULL)
-        SDL_FreeSurface(ocr->settings->sudokuSurface);
-
-    // set the new surface
-    ocr->settings->sudokuSurface = rotatedSurface;
 
     return 0;
 }
@@ -312,6 +336,36 @@ int Update(struct nk_context* ctx, struct OCR* ocr){
     if (ocr->settings->sudokuTexture)
         SDL_RenderCopy(renderer, ocr->settings->sudokuTexture, NULL, NULL);
 
+    if (ocr->settings->displayDebugInfo){
+        if (ocr->sudoku->digitRects)
+            DrawRects(ocr->sudoku->digitRects, 81, ocr->settings->gridMatrix, (SDL_Color){255, 0, 0, 255});
+            // for (int i = 0; i < 81; i++){
+            //     SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255);
+            //     SDL_RenderDrawRects(renderer, ocr->sudoku->digitRects, 81);
+            // }
+        if (ocr->sudoku->horizontalBlocks)
+            DrawRects(ocr->sudoku->horizontalBlocks, ocr->sudoku->horizontalBlockCount, ocr->settings->gridMatrix, (SDL_Color){0, 255, 0, 255});
+            // for (int i = 0; i < 81; i++){
+            //     SDL_SetRenderDrawColor(renderer, 0, 255, 0, 255);
+            //     SDL_RenderFillRects(renderer, ocr->sudoku->horizontalBlocks, ocr->sudoku->horizontalBlockCount);
+            // }
+        if (ocr->sudoku->verticalBlocks)
+            DrawRects(ocr->sudoku->verticalBlocks, ocr->sudoku->verticalBlockCount, ocr->settings->gridMatrix, (SDL_Color){0, 255, 0, 255});
+
+        if (ocr->sudoku->digits){
+            for (int i = 0; i <9; i++){
+                for (int j = 0; j < 9; j++){
+                    int digit = ocr->sudoku->digits[i*9 +j];
+                    if (digit == -1)
+                        printf("  ");
+                    else
+                        printf("%d ", ocr->sudoku->digits[i*9 +j]);
+                }
+                printf("\n");
+            }
+            printf("\n");
+        }
+    }
     nk_sdl_render(NK_ANTI_ALIASING_ON);
     SDL_RenderPresent(renderer);
     return errorCode;

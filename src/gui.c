@@ -1,7 +1,18 @@
 #include "header/neurons.h"
 #include "header/files.h"
+#include <SDL2/SDL2_rotozoom.h>
+
+
+void RotateInterface(struct OCR* ocr, struct nk_context* ctx){
+    nk_layout_row_dynamic(ctx, 25, 1);
+    if (nk_button_label(ctx, "Rotate 90 degrees")){
+        SDL_Surface *rotated = rotateSurface90Degrees(ocr->settings->sudokuSurface, 1);
+        ChangeGrid(ocr, rotated);
+    }
+}
 
 void LearningRateInterface(struct OCR* ocr, struct nk_context* ctx){
+    nk_layout_row_dynamic(ctx, 25, 1);
     char str[32] = {0};
     double learningRate = ocr->settings->learningRate;
     snprintf(str, sizeof(str), "learning rate: %.3f", learningRate);
@@ -13,6 +24,7 @@ void LearningRateInterface(struct OCR* ocr, struct nk_context* ctx){
 }
 
 void TrainingCycleInterface(struct OCR* ocr, struct nk_context* ctx){
+    nk_layout_row_dynamic(ctx, 25, 1);
     char str[32] = {0};
     size_t trainingCycleCount = ocr->settings->trainingCycleCount;
     snprintf(str, sizeof(str), "training cycles: %ld", trainingCycleCount);
@@ -24,8 +36,8 @@ void TrainingCycleInterface(struct OCR* ocr, struct nk_context* ctx){
 }
 
 void NeuronsPerLayerInterface(struct OCR* ocr, struct nk_context* ctx){
-    size_t layerCount = ocr->settings->layerCount;
     nk_layout_row_dynamic(ctx, 25, 2);
+    size_t layerCount = ocr->settings->layerCount;
 
     if (nk_button_label(ctx, "Add hidden layer")){
         if (layerCount + 1 <= MAXIMUM_LAYER_COUNT){
