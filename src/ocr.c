@@ -172,7 +172,7 @@ int GuiUpdate(struct nk_context* ctx, struct OCR* ocr){
     if (nk_begin(
             ctx,
             "OCR Settings",
-            nk_rect(50, 50, 420, 430),
+            nk_rect(50, 50, 250, 700),
             NK_WINDOW_BORDER |
             NK_WINDOW_MOVABLE |
             NK_WINDOW_TITLE))

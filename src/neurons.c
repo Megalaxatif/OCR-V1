@@ -351,6 +351,7 @@ int SolveSudoku(struct OCR* ocr){
     }
 
     struct Mat* gridGrayScale = ocr->settings->gridMatrix;
+    //printf("w: %ld, h: %ld\n", gridGrayScale->col, gridGrayScale->row);
     struct Network* network = ocr->network;
     SDL_Texture* sudokuTexture = ocr->settings->sudokuTexture;
 
