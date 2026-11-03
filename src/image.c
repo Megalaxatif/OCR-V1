@@ -119,9 +119,15 @@ SDL_Rect* ScanVerticalLines(struct Mat* grayScale, size_t* lineCount_){
         currentLine.w = 0;
         int inLine = 0; // boolean
         for(size_t y = 0; y < grayScale->row; y++){
-            int grayCode = grayScale->data[y][x];
+            int grayCode1 = grayScale->data[y][x];
+            int grayCode2 = 1;
+            int grayCode3 = 1;
+            if (x + 1 < grayScale->col)
+                grayCode2 = grayScale->data[y][x+1];
+            if (x > 0)
+                grayCode3 = grayScale->data[y][x-1];
             if (inLine){
-                if (grayCode == 0)
+                if (grayCode1 == 0 || grayCode2 == 0 || grayCode3 == 0)
                     currentLine.h++;
                 else {
                     int isHole = 0;
@@ -152,7 +158,7 @@ SDL_Rect* ScanVerticalLines(struct Mat* grayScale, size_t* lineCount_){
                 }
             }
             else {
-                if (grayCode == 0){ // we are going inside a potential line
+                if (grayCode1 == 0 || grayCode2 == 0 || grayCode3 == 0){
                     currentLine.h = 1;
                     currentLine.y = y;
                     inLine = 1;
@@ -194,7 +200,6 @@ SDL_Rect* ConvertVerticalLinesToBlocks(SDL_Rect* lines, size_t lineCount, size_t
             blockWidth ++;
         }
         else{
-            int delta = 0.05*prevLine.h;
             size_t adjacentLineFound = 0;
             size_t j = i+1; // all the lines before i are above so no need to check them
             while(!adjacentLineFound && j < lineCount){
@@ -203,14 +208,11 @@ SDL_Rect* ConvertVerticalLinesToBlocks(SDL_Rect* lines, size_t lineCount, size_t
                     j++;
                     continue; // ignore the lines already converted
                 }
-                if (adjacentLine.x == prevLine.x + 1 &&
-                    abs(adjacentLine.y - prevLine.y) < delta &&
-                    abs(adjacentLine.h - prevLine.h) < delta)
-                {
+                if (adjacentLine.x == prevLine.x + 1){
                     if (adjacentLine.y < blockMinY)
                         blockMinY = adjacentLine.y;
-                    if (adjacentLine.h > blockMaxH)
-                        blockMaxH = adjacentLine.h;
+                    if (adjacentLine.y + adjacentLine.h > blockMaxH)
+                        blockMaxH += adjacentLine.y + adjacentLine.h - blockMaxH;
 
                     adjacentLineFound = 1;
                     lines[j] = (SDL_Rect){.x = 0, .y = 0, .w = 0, .h = 0}; // remove it from the list to avoid repetition
@@ -242,7 +244,6 @@ SDL_Rect* ConvertVerticalLinesToBlocks(SDL_Rect* lines, size_t lineCount, size_t
 }
 
 // HORIZONTAL----------------------------------
-
 SDL_Rect* ScanHorizontalLines(struct Mat* grayScale, size_t* lineCount_){
     if (grayScale == NULL || lineCount_ == NULL){
         printf("Error: ScanHorizontalLines, invalid argument\n");
@@ -260,9 +261,15 @@ SDL_Rect* ScanHorizontalLines(struct Mat* grayScale, size_t* lineCount_){
         currentLine.w = 0;
         int inLine = 0; // boolean
         for(size_t x = 0; x < grayScale->col; x++){
-            int grayCode = grayScale->data[y][x];
+            int grayCode1 = grayScale->data[y][x];
+            int grayCode2 = 1;
+            int grayCode3 = 1;
+            if (y > 0)
+                grayCode2 = grayScale->data[y-1][x];
+            if (y+1 < grayScale->row)
+                grayCode3 = grayScale->data[y+1][x];
             if (inLine){
-                if (grayCode == 0)
+                if (grayCode1 == 0 || grayCode2 == 0 || grayCode3 == 0)
                     currentLine.w++;
                 else {
                     int isHole = 0;
@@ -293,7 +300,7 @@ SDL_Rect* ScanHorizontalLines(struct Mat* grayScale, size_t* lineCount_){
                 }
             }
             else {
-                if (grayCode == 0){ // we are going inside a potential line
+                if (grayCode1 == 0 || grayCode2 == 0 || grayCode3 == 0){ // we are going inside a potential line
                     currentLine.w = 1;
                     currentLine.x = x;
                     inLine = 1;
@@ -343,7 +350,6 @@ SDL_Rect* ConvertHorizontalLinesToBlocks(SDL_Rect* lines, size_t lineCount, size
             blockHeight ++;
         }
         else{
-            int delta = 0.05*prevLine.w;
             size_t adjacentLineFound = 0;
             size_t j = i+1; // all the lines before i are above so no need to check them
             while(!adjacentLineFound && j < lineCount){
@@ -352,14 +358,11 @@ SDL_Rect* ConvertHorizontalLinesToBlocks(SDL_Rect* lines, size_t lineCount, size
                     j++;
                     continue; // ignore the lines already converted
                 }
-                if (adjacentLine.y == prevLine.y + 1 &&
-                    abs(adjacentLine.x - prevLine.x) < delta &&
-                    abs(adjacentLine.w - prevLine.w) < delta)
-                {
+                if (adjacentLine.y == prevLine.y + 1){
                     if (adjacentLine.x < blockMinX)
                         blockMinX = adjacentLine.x;
-                    if (adjacentLine.w > blockMaxW)
-                        blockMaxW = adjacentLine.w;
+                    if (adjacentLine.x + adjacentLine.w > blockMaxW)
+                        blockMaxW += adjacentLine.x + adjacentLine.w - blockMaxW;
 
                     adjacentLineFound = 1;
                     lines[j] = (SDL_Rect){.x = 0, .y = 0, .w = 0, .h = 0}; // remove it from the list to avoid repetition
