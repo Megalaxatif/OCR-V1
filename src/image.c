@@ -438,12 +438,12 @@ int SortBlocks(SDL_Rect** horizontalBlocks, SDL_Rect** verticalBlocks, size_t* h
     return 0;
 }
 
-SDL_Rect* GetSudokuDigitRects(SDL_Rect* horizontalBlocks, SDL_Rect* verticalBlocks){
+SDL_Rect* GetGridDigitRects(SDL_Rect* horizontalBlocks, SDL_Rect* verticalBlocks){
     if (horizontalBlocks == NULL || verticalBlocks == NULL){
         printf("Error: GetDigitRects, invalid argument\n");
         return NULL;
     }
-    // a sudoku has 81 digits
+    // a grid has 81 digits
     SDL_Rect* digitRects = malloc(81*sizeof(SDL_Rect));
 
     for(size_t i = 0; i < 9; i++){
@@ -490,9 +490,9 @@ struct Mat** ConvertTexturesToGrayScale(SDL_Texture** textures, size_t textureCo
     return grayScales;
 }
 
-SDL_Texture** GetSudokuDigitTextures(SDL_Rect* digitRects, SDL_Texture* sudokuTexture){
-    if(digitRects == NULL || sudokuTexture == NULL){
-        printf("Error: GetSudokuDigits, invalid argument\n");
+SDL_Texture** GetGridDigitTextures(SDL_Rect* digitRects, SDL_Texture* gridTexture){
+    if(digitRects == NULL || gridTexture == NULL){
+        printf("Error: GetGridDigits, invalid argument\n");
         return NULL;
     }
 
@@ -503,7 +503,7 @@ SDL_Texture** GetSudokuDigitTextures(SDL_Rect* digitRects, SDL_Texture* sudokuTe
     for(int i = 0; i < 9; i++){
         for(int j = 0; j < 9; j++){
             SDL_SetRenderTarget(renderer, digitTextures[i*9+j]);
-            SDL_RenderCopy( renderer, sudokuTexture, digitRects + i*9+j, NULL);
+            SDL_RenderCopy( renderer, gridTexture, digitRects + i*9+j, NULL);
         }
     }
     return digitTextures;

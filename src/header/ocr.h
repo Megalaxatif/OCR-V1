@@ -14,22 +14,22 @@ struct Network{
     struct Layer** layers;
 };
 
-struct Sudoku {
+struct GridInfo {
     size_t horizontalBlockCount;
     size_t verticalBlockCount;
     SDL_Rect* verticalBlocks;
     SDL_Rect* horizontalBlocks;
-    struct SDL_Rect* digitRects;
-    SDL_Texture** digitTextures;
-    struct Mat** digitGrayScales;
-    int* digits;
+    struct SDL_Rect* letterRects;
+    SDL_Texture** letterTextures;
+    struct Mat** letterGrayScales;
+    int* letters;
 };
 
 struct Settings {
     char networkPath[NETWORK_PATH_BUFFER_SIZE];
     int displayDebugInfo;
-    SDL_Texture* sudokuTexture;
-    SDL_Surface* sudokuSurface;
+    SDL_Texture* gridTexture;
+    SDL_Surface* gridSurface;
     struct Mat* gridMatrix;
     size_t trainingCycleCount;
     double learningRate;
@@ -45,7 +45,7 @@ struct Info {
 struct OCR {
     struct Info* info;
     struct Settings* settings;
-    struct Sudoku* sudoku;
+    struct GridInfo* gridInfo;
     struct Network* network;
 };
 
@@ -53,15 +53,15 @@ struct OCR {
 int Update(struct nk_context* ctx, struct OCR* ocr);
 struct OCR* CreateOCR();
 void DestroyOCR(struct OCR* ocr);
-// this function exists because I'm too lazy to copy paste the same code for both DestroyOCR and the cleanup label of SolveSudoku
-void DestroySudokuArguments(
+// this function exists because I'm too lazy to copy paste the same code for both DestroyOCR and the cleanup label of SolveGrid
+void DestroyGridArguments(
     SDL_Rect* horizontalBlocks,
     SDL_Rect* verticalBlocks,
-    SDL_Rect* digitRects,
-    SDL_Texture** digitTextures,
-    struct Mat** digitGrayScales,
-    int* digits);
-struct Sudoku* CreateEmptySudoku();
-void DestroySudoku(struct Sudoku* sudoku);
+    SDL_Rect* letterRects,
+    SDL_Texture** letterTextures,
+    struct Mat** letterGrayScales,
+    int* letters);
+struct GridInfo* CreateEmptyGrid();
+void DestroyGrid(struct GridInfo* grid);
 
 void ChangeGrid(struct OCR* ocr, SDL_Surface* newGrid);

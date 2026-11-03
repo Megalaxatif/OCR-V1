@@ -5,13 +5,13 @@
 #include <SDL2/SDL_surface.h>
 #include <stdio.h>
 
-void DestroySudokuArguments(
+void DestroyGridArguments(
     SDL_Rect* horizontalBlocks,
     SDL_Rect* verticalBlocks,
-    SDL_Rect* digitRects,
-    SDL_Texture** digitTextures,
-    struct Mat** digitGrayScales,
-    int* digits){
+    SDL_Rect* letterRects,
+    SDL_Texture** letterTextures,
+    struct Mat** letterGrayScales,
+    int* letters){
 
     // free blocks
     if (horizontalBlocks != NULL)
@@ -20,44 +20,44 @@ void DestroySudokuArguments(
     if (verticalBlocks != NULL)
         free(verticalBlocks);
 
-    // free digitRects
-    if (digitRects != NULL)
-        free(digitRects);
+    // free letterRects
+    if (letterRects != NULL)
+        free(letterRects);
 
-    // destroy digitTextures
-    if (digitTextures != NULL){
+    // destroy letterTextures
+    if (letterTextures != NULL){
         for (int i = 0; i < 81; i++)
-            SDL_DestroyTexture(digitTextures[i]);
-        free(digitTextures);
+            SDL_DestroyTexture(letterTextures[i]);
+        free(letterTextures);
     }
 
     // destroy grayScales
-    if (digitGrayScales != NULL){
+    if (letterGrayScales != NULL){
         for (int i = 0; i < 81; i++)
-            MatDestroy(digitGrayScales[i]);
-        free(digitGrayScales);
+            MatDestroy(letterGrayScales[i]);
+        free(letterGrayScales);
     }
-    // free digits
-    if (digits != NULL)
-        free(digits);
+    // free letters
+    if (letters != NULL)
+        free(letters);
 }
 
-void DestroySudoku(struct Sudoku* sudoku){
+void DestroyGrid(struct GridInfo* grid){
     printf("DESTROY SUDOKU\n");
-    if (sudoku == NULL){
-        printf("WARNING: DestroySudoku, no sudoku to destroy (sudoku is NULL)\n");
+    if (grid == NULL){
+        printf("WARNING: DestroyGrid, no grid to destroy (grid is NULL)\n");
         return;
     }
-    DestroySudokuArguments(
-        sudoku->horizontalBlocks,
-        sudoku->verticalBlocks,
-        sudoku->digitRects,
-        sudoku->digitTextures,
-        sudoku->digitGrayScales,
-        sudoku->digits
+    DestroyGridArguments(
+        grid->horizontalBlocks,
+        grid->verticalBlocks,
+        grid->letterRects,
+        grid->letterTextures,
+        grid->letterGrayScales,
+        grid->letters
     );
 
-    free(sudoku);
+    free(grid);
 }
 
 void DestroySettings(struct Settings* settings){
@@ -66,10 +66,10 @@ void DestroySettings(struct Settings* settings){
         printf("WARNING: DestroySettings, no settings to destroy (settings is NULL)\n");
         return;
     }
-    if (settings->sudokuTexture != NULL)
-        SDL_DestroyTexture(settings->sudokuTexture);
-    if (settings->sudokuSurface != NULL)
-        SDL_FreeSurface(settings->sudokuSurface);
+    if (settings->gridTexture != NULL)
+        SDL_DestroyTexture(settings->gridTexture);
+    if (settings->gridSurface != NULL)
+        SDL_FreeSurface(settings->gridSurface);
     if (settings->gridMatrix != NULL)
         MatDestroy(settings->gridMatrix);
     free(settings);
@@ -80,8 +80,8 @@ struct Settings* CreateDefaultSettings(){
     *settings = (struct Settings){
         .networkPath = DEFAULT_NETWORK_PATH,
         .displayDebugInfo = DEFAULT_DEBUG_INFO,
-        .sudokuTexture = NULL,
-        .sudokuSurface = NULL,
+        .gridTexture = NULL,
+        .gridSurface = NULL,
         .gridMatrix = NULL,
         .trainingCycleCount = DEFAULT_TRAINING_CYCLE_COUNT,
         .learningRate = DEFAULT_LEARNING_RATE,
@@ -107,17 +107,17 @@ void DestroyInfo(struct Info* info){
     free(info);
 }
 
-struct Sudoku* CreateEmptySudoku(){
-    struct Sudoku* sudoku = malloc(sizeof(struct Sudoku));
-    *sudoku = (struct Sudoku){0}; // everything is set to NULL or 0
-    return sudoku;
+struct GridInfo* CreateEmptyGrid(){
+    struct GridInfo* grid = malloc(sizeof(struct GridInfo));
+    *grid = (struct GridInfo){0}; // everything is set to NULL or 0
+    return grid;
 }
 
 struct OCR* CreateOCR(){
     struct OCR* ocr = malloc(sizeof(struct OCR));
     ocr->info = CreateInfo();
     ocr->settings = CreateDefaultSettings();
-    ocr->sudoku = CreateEmptySudoku();
+    ocr->gridInfo = CreateEmptyGrid();
     ocr->network = CreateNetwork(DEFAULT_LAYER_COUNT, (int[])DEFAULT_NEURONS_PER_LAYER, NULL, NULL);
     return ocr;
 }
@@ -130,7 +130,7 @@ void DestroyOCR(struct OCR* ocr){
     }
     DestroyInfo(ocr->info);
     DestroySettings(ocr->settings);
-    DestroySudoku(ocr->sudoku);
+    DestroyGrid(ocr->gridInfo);
     DestroyNetwork(ocr->network);
     free(ocr);
 }
@@ -148,18 +148,18 @@ void ChangeGrid(struct OCR* ocr, SDL_Surface* newGrid){
     ocr->settings->gridMatrix = ConvertSurfaceToGrayScaleMatrix(newGrid);
 
     // destroy the previous texture
-    if (ocr->settings->sudokuTexture != NULL)
-        SDL_DestroyTexture(ocr->settings->sudokuTexture);
+    if (ocr->settings->gridTexture != NULL)
+        SDL_DestroyTexture(ocr->settings->gridTexture);
 
     // set the new texture
-    ocr->settings->sudokuTexture = SDL_CreateTextureFromSurface(renderer, newGrid);
+    ocr->settings->gridTexture = SDL_CreateTextureFromSurface(renderer, newGrid);
 
     // destroy the previous surface
-    if (ocr->settings->sudokuSurface != NULL)
-        SDL_FreeSurface(ocr->settings->sudokuSurface);
+    if (ocr->settings->gridSurface != NULL)
+        SDL_FreeSurface(ocr->settings->gridSurface);
 
     // set the new surface
-    ocr->settings->sudokuSurface = newGrid;
+    ocr->settings->gridSurface = newGrid;
 }
 
 int GuiUpdate(struct nk_context* ctx, struct OCR* ocr){
@@ -237,16 +237,16 @@ int GuiUpdate(struct nk_context* ctx, struct OCR* ocr){
 
         //SUDOKU
         nk_layout_row_dynamic(ctx, 25, 1);
-        nk_label(ctx, "Sudoku", NK_TEXT_LEFT);
+        nk_label(ctx, "Grid", NK_TEXT_LEFT);
 
         nk_layout_row_dynamic(ctx, 35, 1);
 
-        if (nk_button_label(ctx, "Solve Sudoku")){
-            printf("Solving Sudoku...\n");
-            errorCode = SolveSudoku(ocr);
+        if (nk_button_label(ctx, "Solve Grid")){
+            printf("Solving Grid...\n");
+            errorCode = SolveGrid(ocr);
             if (errorCode != 0){
                 error = 1;
-                printf("Error: GuiUpdate, SolveSudoku returned an error\n");
+                printf("Error: GuiUpdate, SolveGrid returned an error\n");
             }
         }
         RotateInterface(ocr, ctx);
@@ -271,15 +271,15 @@ int GuiUpdate(struct nk_context* ctx, struct OCR* ocr){
 int HandleDropedFile(SDL_Event event, struct OCR* ocr){
     // TODO check if the file has a valid extension
     char* tmp = event.drop.file;
-    SDL_Surface* sudokuSurface = IMG_Load(tmp);
+    SDL_Surface* gridSurface = IMG_Load(tmp);
     SDL_free(tmp);
-    if (sudokuSurface == NULL){
+    if (gridSurface == NULL){
         printf("Error: HandleDropedFile, impossible to load the image\n");
         return 1;
     }
     // get the grayScale
-    SDL_Surface* convertedSurface = SDL_ConvertSurfaceFormat(sudokuSurface, SDL_PIXELFORMAT_RGBA32, 0);
-    SDL_FreeSurface(sudokuSurface);
+    SDL_Surface* convertedSurface = SDL_ConvertSurfaceFormat(gridSurface, SDL_PIXELFORMAT_RGBA32, 0);
+    SDL_FreeSurface(gridSurface);
     SDL_Surface* grayScale = ConvertSurfaceToGrayScale(convertedSurface);
     if (grayScale == NULL){
         printf("Error: HandleDropedFile, ConvertSurfaceToGrayScale returned NULL\n");
@@ -297,9 +297,9 @@ int HandleDropedFile(SDL_Event event, struct OCR* ocr){
         return 1;
     }
     ChangeGrid(ocr, rotatedSurface);
-    // reset the sudoku informations
-    DestroySudoku(ocr->sudoku);
-    ocr->sudoku = CreateEmptySudoku();
+    // reset the grid informations
+    DestroyGrid(ocr->gridInfo);
+    ocr->gridInfo = CreateEmptyGrid();
 
     return 0;
 }
@@ -331,33 +331,33 @@ int Update(struct nk_context* ctx, struct OCR* ocr){
         printf("Error : Update, GuiUpdate failed\n");
     SDL_SetRenderTarget(renderer, NULL);
 
-    if (ocr->settings->sudokuTexture)
-        SDL_RenderCopy(renderer, ocr->settings->sudokuTexture, NULL, NULL);
+    if (ocr->settings->gridTexture)
+        SDL_RenderCopy(renderer, ocr->settings->gridTexture, NULL, NULL);
 
     if (ocr->settings->displayDebugInfo){
-        if (ocr->sudoku->digitRects)
-            DrawRects(ocr->sudoku->digitRects, 81, ocr->settings->gridMatrix, (SDL_Color){255, 0, 0, 255});
+        if (ocr->gridInfo->letterRects)
+            DrawRects(ocr->gridInfo->letterRects, 81, ocr->settings->gridMatrix, (SDL_Color){255, 0, 0, 255});
             // for (int i = 0; i < 81; i++){
             //     SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255);
-            //     SDL_RenderDrawRects(renderer, ocr->sudoku->digitRects, 81);
+            //     SDL_RenderDrawRects(renderer, ocr->gridInfo->letterRects, 81);
             // }
-        if (ocr->sudoku->horizontalBlocks)
-            DrawRects(ocr->sudoku->horizontalBlocks, ocr->sudoku->horizontalBlockCount, ocr->settings->gridMatrix, (SDL_Color){0, 255, 0, 255});
+        if (ocr->gridInfo->horizontalBlocks)
+            DrawRects(ocr->gridInfo->horizontalBlocks, ocr->gridInfo->horizontalBlockCount, ocr->settings->gridMatrix, (SDL_Color){0, 255, 0, 255});
             // for (int i = 0; i < 81; i++){
             //     SDL_SetRenderDrawColor(renderer, 0, 255, 0, 255);
-            //     SDL_RenderFillRects(renderer, ocr->sudoku->horizontalBlocks, ocr->sudoku->horizontalBlockCount);
+            //     SDL_RenderFillRects(renderer, ocr->gridInfo->horizontalBlocks, ocr->gridInfo->horizontalBlockCount);
             // }
-        if (ocr->sudoku->verticalBlocks)
-            DrawRects(ocr->sudoku->verticalBlocks, ocr->sudoku->verticalBlockCount, ocr->settings->gridMatrix, (SDL_Color){0, 255, 0, 255});
+        if (ocr->gridInfo->verticalBlocks)
+            DrawRects(ocr->gridInfo->verticalBlocks, ocr->gridInfo->verticalBlockCount, ocr->settings->gridMatrix, (SDL_Color){0, 255, 0, 255});
 
-        if (ocr->sudoku->digits){
+        if (ocr->gridInfo->letters){
             for (int i = 0; i <9; i++){
                 for (int j = 0; j < 9; j++){
-                    int digit = ocr->sudoku->digits[i*9 +j];
-                    if (digit == -1)
+                    int letter = ocr->gridInfo->letters[i*9 +j];
+                    if (letter == -1)
                         printf("  ");
                     else
-                        printf("%d ", ocr->sudoku->digits[i*9 +j]);
+                        printf("%d ", ocr->gridInfo->letters[i*9 +j]);
                 }
                 printf("\n");
             }

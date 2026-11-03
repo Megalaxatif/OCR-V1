@@ -15,7 +15,7 @@ int GetGuessedDigit(struct Network* network);
 int Train(struct OCR* ocr, char** sample, size_t sampleSize, struct Mat* answer[]);
 int SolveGrayScale(struct Network* network, struct Mat* input);
 int* SolveGrayScales(struct Mat** grayScales, size_t grayScaleCount, struct Network* network);
-int SolveSudoku(struct OCR* ocr);
+int SolveGrid(struct OCR* ocr);
 int SolveImage(char* path, struct Network* network);
 struct Network* LoadNetwork(char* path);
 int SaveNetwork(struct Network* network, char* path);

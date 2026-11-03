@@ -155,7 +155,7 @@ int GetGuessedDigit(struct Network* network){
             biggestIndex = j;
         }
     }
-    return biggestIndex; // the guessed digit corresponds to this index
+    return biggestIndex; // the guessed letter corresponds to this index
 }
 
 struct Mat** GetAnswer10(){
@@ -290,23 +290,23 @@ int* SolveGrayScales(struct Mat** grayScales, size_t grayScaleCount, struct Netw
         printf("Error: SolveGrayScales, invalid argument\n");
         return NULL;
     }
-    int* digits = malloc(grayScaleCount * sizeof(int));
+    int* letters = malloc(grayScaleCount * sizeof(int));
     for(size_t i = 0; i < grayScaleCount; i++){
         if (grayScales[i] == NULL)
-            digits[i] = -1;
+            letters[i] = -1;
         else {
             int errorCode = SolveGrayScale(network, grayScales[i]);
 
             if (errorCode != 0){
                 printf("Error: SolveGrayScales, SolveGrayScale returned %d\n", errorCode);
-                free(digits);
+                free(letters);
                 return NULL;
             }
             int guessedDigit = GetGuessedDigit(network);
-            digits[i] = guessedDigit;
+            letters[i] = guessedDigit;
         }
     }
-    return digits;
+    return letters;
 }
 
 int SolveImage(char* path, struct Network* network){
@@ -344,27 +344,27 @@ int SolveImage(char* path, struct Network* network){
     return guessedDigit;
 }
 
-int SolveSudoku(struct OCR* ocr){
+int SolveGrid(struct OCR* ocr){
     if (ocr == NULL){
-        printf("Error: SolveSudoku, invalid argument\n");
+        printf("Error: SolveGrid, invalid argument\n");
         return 1;
     }
 
     struct Mat* gridGrayScale = ocr->settings->gridMatrix;
     //printf("w: %ld, h: %ld\n", gridGrayScale->col, gridGrayScale->row);
     struct Network* network = ocr->network;
-    SDL_Texture* sudokuTexture = ocr->settings->sudokuTexture;
+    SDL_Texture* gridTexture = ocr->settings->gridTexture;
 
     if (gridGrayScale == NULL){
-        printf("Error: SolveSudoku, gridGrayScale is NULL\n");
+        printf("Error: SolveGrid, gridGrayScale is NULL\n");
         return 2;
     }
     if (network == NULL){
-        printf("Error: SolveSudoku, network is NULL\n");
+        printf("Error: SolveGrid, network is NULL\n");
         return 2;
     }
-    if (sudokuTexture == NULL){
-        printf("Error: SolveSudoku, sudokuTexture is NULL\n");
+    if (gridTexture == NULL){
+        printf("Error: SolveGrid, gridTexture is NULL\n");
         return 2;
     }
 
@@ -381,61 +381,61 @@ int SolveSudoku(struct OCR* ocr){
     free(horizontalLines);
     free(verticalLines);
 
-    SDL_Texture** digitTextures = NULL;
-    SDL_Rect* digitRects = NULL;
-    struct Mat** digitGrayScales = NULL;
-    int* digits = NULL;
+    SDL_Texture** letterTextures = NULL;
+    SDL_Rect* letterRects = NULL;
+    struct Mat** letterGrayScales = NULL;
+    int* letters = NULL;
 
     int errorCode = SortBlocks(&horizontalBlocks, &verticalBlocks, &horizontalBlockCount, &verticalBlockCount);
     if (errorCode != 0){
-        printf("Error: SolveSudoku, SortBlocks returned an error\n");
+        printf("Error: SolveGrid, SortBlocks returned an error\n");
         goto cleanup;
     }
 
-    digitRects = GetSudokuDigitRects(horizontalBlocks, verticalBlocks); // always return a 81 array
-    if (digitRects == NULL){
-        printf("Error: SolveSudoku, GetSudokuDigitRects returned NULL\n");
+    letterRects = GetGridDigitRects(horizontalBlocks, verticalBlocks); // always return a 81 array
+    if (letterRects == NULL){
+        printf("Error: SolveGrid, GetGridDigitRects returned NULL\n");
         errorCode = 3;
         goto cleanup;
     }
-    digitTextures = GetSudokuDigitTextures(digitRects, sudokuTexture);
-    if (digitTextures == NULL){
-        printf("Error: SolveSudoku, GetSudokuDigitTextures returned NULL\n");
+    letterTextures = GetGridDigitTextures(letterRects, gridTexture);
+    if (letterTextures == NULL){
+        printf("Error: SolveGrid, GetGridDigitTextures returned NULL\n");
         errorCode = 3;
         goto cleanup;
     }
-    digitGrayScales = ConvertTexturesToGrayScale(digitTextures, 81);
-    digitGrayScales = DeleteBlankGrayScales(digitGrayScales, 81);
+    letterGrayScales = ConvertTexturesToGrayScale(letterTextures, 81);
+    letterGrayScales = DeleteBlankGrayScales(letterGrayScales, 81);
 
-    if (digitGrayScales == NULL){
-        printf("Error: SolveSudoku, ConvertTexturesToGrayScale returned NULL\n");
+    if (letterGrayScales == NULL){
+        printf("Error: SolveGrid, ConvertTexturesToGrayScale returned NULL\n");
         errorCode = 3;
         goto cleanup;
     }
 
-    digits = SolveGrayScales(digitGrayScales, 81, network);
-    if (digits == NULL){
-        printf("Error: SolveSudoku, SolveGrayScales returned NULL\n");
+    letters = SolveGrayScales(letterGrayScales, 81, network);
+    if (letters == NULL){
+        printf("Error: SolveGrid, SolveGrayScales returned NULL\n");
         errorCode = 3;
         goto cleanup;
     }
 
     // reset
-    DestroySudoku(ocr->sudoku);
-    ocr->sudoku = CreateEmptySudoku();
+    DestroyGrid(ocr->gridInfo);
+    ocr->gridInfo = CreateEmptyGrid();
 
-    ocr->sudoku->horizontalBlocks = horizontalBlocks;
-    ocr->sudoku->verticalBlocks = verticalBlocks;
-    ocr->sudoku->horizontalBlockCount = horizontalBlockCount;
-    ocr->sudoku->verticalBlockCount = verticalBlockCount;
-    ocr->sudoku->digitRects = digitRects;
-    ocr->sudoku->digitTextures = digitTextures;
-    ocr->sudoku->digitGrayScales = digitGrayScales;
-    ocr->sudoku->digits = digits;
+    ocr->gridInfo->horizontalBlocks = horizontalBlocks;
+    ocr->gridInfo->verticalBlocks = verticalBlocks;
+    ocr->gridInfo->horizontalBlockCount = horizontalBlockCount;
+    ocr->gridInfo->verticalBlockCount = verticalBlockCount;
+    ocr->gridInfo->letterRects = letterRects;
+    ocr->gridInfo->letterTextures = letterTextures;
+    ocr->gridInfo->letterGrayScales = letterGrayScales;
+    ocr->gridInfo->letters = letters;
 
     cleanup:
     if (errorCode != 0)
-        DestroySudokuArguments(horizontalBlocks, verticalBlocks, digitRects, digitTextures, digitGrayScales, digits);
+        DestroyGridArguments(horizontalBlocks, verticalBlocks, letterRects, letterTextures, letterGrayScales, letters);
     return errorCode;
 }
 

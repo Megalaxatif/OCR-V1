@@ -20,9 +20,9 @@ SDL_Rect* ScanVerticalLines(struct Mat* grayScale, size_t* lineCount_); // same 
 SDL_Rect* ConvertVerticalLinesToBlocks(SDL_Rect* lines, size_t lineCount, size_t* blockCount_); // same principle as ConvertHorizontalLinesToBlocks
 // remove all the blocks that are not in a grid and change horizontalBlockCount and verticalBlockCount accordingly
 int SortBlocks(SDL_Rect** horizontalBlocks, SDL_Rect** verticalBlocks, size_t* horizontalBlockCount, size_t* verticalBlockCount);
-// IMPORTANT: this function supposes that horizontalBlocks and verticalBlocks represent a valid sudoku grid
-SDL_Rect* GetSudokuDigitRects(SDL_Rect* horizontalBlocks, SDL_Rect* verticalBlocks); // return the array of rectangles from where to extract the characters on the grid
-SDL_Texture** GetSudokuDigitTextures(SDL_Rect* digitRects, SDL_Texture* sudokuTexture); // extract the textures at the specified rectangles
+// IMPORTANT: this function supposes that horizontalBlocks and verticalBlocks represent a valid grid grid
+SDL_Rect* GetGridDigitRects(SDL_Rect* horizontalBlocks, SDL_Rect* verticalBlocks); // return the array of rectangles from where to extract the characters on the grid
+SDL_Texture** GetGridDigitTextures(SDL_Rect* digitRects, SDL_Texture* gridTexture); // extract the textures at the specified rectangles
 struct Mat** ConvertTexturesToGrayScale(SDL_Texture** textures, size_t textureCount); // convert the list of textures to a list of grayScale and return it
 int DrawRects(SDL_Rect* rects, size_t rectCount, struct Mat* referenceMatrix, SDL_Color color); // draw the list of rectangles with the given color on the screen, referenceMatrix is needed to resize the rectangles correctly
 int DrawFilledRects(SDL_Rect* rects, size_t rectCount, struct Mat* referenceMatrix, SDL_Color color); // same as DrawRects but this time it draws filled rectangles

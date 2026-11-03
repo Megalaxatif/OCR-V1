@@ -6,7 +6,7 @@
 void RotateInterface(struct OCR* ocr, struct nk_context* ctx){
     nk_layout_row_dynamic(ctx, 25, 1);
     if (nk_button_label(ctx, "Rotate 90 degrees")){
-        SDL_Surface *rotated = rotateSurface90Degrees(ocr->settings->sudokuSurface, 1);
+        SDL_Surface *rotated = rotateSurface90Degrees(ocr->settings->gridSurface, 1);
         ChangeGrid(ocr, rotated);
     }
 }
