@@ -20,8 +20,6 @@ struct GridInfo {
     SDL_Rect* verticalBlocks;
     SDL_Rect* horizontalBlocks;
     struct SDL_Rect* letterRects;
-    SDL_Texture** letterTextures;
-    struct Mat** letterGrayScales;
     int* letters;
 };
 
@@ -58,8 +56,6 @@ void DestroyGridArguments(
     SDL_Rect* horizontalBlocks,
     SDL_Rect* verticalBlocks,
     SDL_Rect* letterRects,
-    SDL_Texture** letterTextures,
-    struct Mat** letterGrayScales,
     int* letters);
 struct GridInfo* CreateEmptyGrid();
 void DestroyGrid(struct GridInfo* grid);

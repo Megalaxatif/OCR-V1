@@ -9,8 +9,6 @@ void DestroyGridArguments(
     SDL_Rect* horizontalBlocks,
     SDL_Rect* verticalBlocks,
     SDL_Rect* letterRects,
-    SDL_Texture** letterTextures,
-    struct Mat** letterGrayScales,
     int* letters){
 
     // free blocks
@@ -21,21 +19,8 @@ void DestroyGridArguments(
         free(verticalBlocks);
 
     // free letterRects
-    if (letterRects != NULL)
+    if (letterRects != NULL){
         free(letterRects);
-
-    // destroy letterTextures
-    if (letterTextures != NULL){
-        for (int i = 0; i < 81; i++)
-            SDL_DestroyTexture(letterTextures[i]);
-        free(letterTextures);
-    }
-
-    // destroy grayScales
-    if (letterGrayScales != NULL){
-        for (int i = 0; i < 81; i++)
-            MatDestroy(letterGrayScales[i]);
-        free(letterGrayScales);
     }
     // free letters
     if (letters != NULL)
@@ -52,8 +37,6 @@ void DestroyGrid(struct GridInfo* grid){
         grid->horizontalBlocks,
         grid->verticalBlocks,
         grid->letterRects,
-        grid->letterTextures,
-        grid->letterGrayScales,
         grid->letters
     );
 

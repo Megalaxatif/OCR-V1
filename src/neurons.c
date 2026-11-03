@@ -429,13 +429,24 @@ int SolveGrid(struct OCR* ocr){
     ocr->gridInfo->horizontalBlockCount = horizontalBlockCount;
     ocr->gridInfo->verticalBlockCount = verticalBlockCount;
     ocr->gridInfo->letterRects = letterRects;
-    ocr->gridInfo->letterTextures = letterTextures;
-    ocr->gridInfo->letterGrayScales = letterGrayScales;
     ocr->gridInfo->letters = letters;
 
     cleanup:
     if (errorCode != 0)
-        DestroyGridArguments(horizontalBlocks, verticalBlocks, letterRects, letterTextures, letterGrayScales, letters);
+        DestroyGridArguments(horizontalBlocks, verticalBlocks, letterRects, letters);
+    // destroy letterTextures
+    if (letterTextures != NULL){
+        for (int i = 0; i < 81; i++)
+            SDL_DestroyTexture(letterTextures[i]);
+        free(letterTextures);
+    }
+
+    // destroy grayScales
+    if (letterGrayScales != NULL){
+        for (int i = 0; i < 81; i++)
+            MatDestroy(letterGrayScales[i]);
+        free(letterGrayScales);
+    }
     return errorCode;
 }
 
