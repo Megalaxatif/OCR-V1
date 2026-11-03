@@ -297,11 +297,10 @@ int HandleDropedFile(SDL_Event event, struct OCR* ocr){
         return 1;
     }
     ChangeGrid(ocr, rotatedSurface);
-
+    //ChangeGrid(ocr, convertedSurface);
     // reset the sudoku informations
     DestroySudoku(ocr->sudoku);
     ocr->sudoku = CreateEmptySudoku();
-
 
     return 0;
 }

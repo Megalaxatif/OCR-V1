@@ -119,9 +119,15 @@ SDL_Rect* ScanVerticalLines(struct Mat* grayScale, size_t* lineCount_){
         currentLine.w = 0;
         int inLine = 0; // boolean
         for(size_t y = 0; y < grayScale->row; y++){
-            int grayCode = grayScale->data[y][x];
+            int grayCode1 = grayScale->data[y][x];
+            int grayCode2 = 1;
+            int grayCode3 = 1;
+            if (x + 1 < grayScale->col)
+                grayCode2 = grayScale->data[y][x+1];
+            if (x > 0)
+                grayCode3 = grayScale->data[y][x-1];
             if (inLine){
-                if (grayCode == 0)
+                if (grayCode1 == 0 || grayCode2 == 0 || grayCode3 == 0)
                     currentLine.h++;
                 else {
                     int isHole = 0;
@@ -152,7 +158,8 @@ SDL_Rect* ScanVerticalLines(struct Mat* grayScale, size_t* lineCount_){
                 }
             }
             else {
-                if (grayCode == 0){ // we are going inside a potential line
+                if (grayCode1 == 0 || grayCode2 == 0 || grayCode3 == 0){
+                //if (grayCode == 0){ // we are going inside a potential line
                     currentLine.h = 1;
                     currentLine.y = y;
                     inLine = 1;
