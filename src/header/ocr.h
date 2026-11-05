@@ -34,7 +34,7 @@ struct Settings {
     size_t layerCount;
     char neuronsPerLayer[MAXIMUM_LAYER_COUNT][8];
 };
-
+// TODO: maybe put this in Settings
 struct Info {
     double correctCounter;
     double counter;
